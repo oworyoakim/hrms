@@ -21,6 +21,8 @@ class CreateLeavesTable extends Migration
             $table->date('start_date');
             $table->date('end_date');
             $table->enum('status',['pending','ongoing','completed','recalled','canceled'])->default('pending');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

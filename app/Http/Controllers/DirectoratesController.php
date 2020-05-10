@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
 use App\Models\Directorate;
+use App\Models\Division;
+use App\Models\Section;
 use Illuminate\Http\Request;
-use Exception;
 use Illuminate\Http\Response;
+use Exception;
 
 class DirectoratesController extends Controller
 {
@@ -13,8 +16,11 @@ class DirectoratesController extends Controller
     {
         try
         {
-            $data = Directorate::all();
-            return response()->json($data);
+            $directorates = Directorate::all()
+                                       ->map(function (Directorate $directorate) {
+                                           return $directorate->getDetails();
+                                       });
+            return response()->json($directorates);
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -25,12 +31,18 @@ class DirectoratesController extends Controller
     {
         try
         {
+            $rules = [
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $data = [
                 'title' => $request->get('title'),
                 'description' => $request->get('description'),
+                'created_by' => $request->get('userId'),
             ];
-            Directorate::create($data);
-            return response()->json('Record Saved!');
+            Directorate::query()->create($data);
+            return response()->json('Directorate created!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -41,39 +53,70 @@ class DirectoratesController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $id = $request->get('id');
-            $directorate = Directorate::find($id);
+            $directorate = Directorate::query()->find($id);
             if (!$directorate)
             {
                 throw new Exception('Directorate not found!');
             }
             $directorate->title = $request->get('title');
             $directorate->description = $request->get('description');
+            $directorate->updated_by = $request->get('userId');
 
             $directorate->save();
 
-            return response()->json('Changes Applied!');
+            return response()->json('Directorate updated!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
         }
     }
 
-    public function show(Request $request, $id)
+    public function show(Request $request)
     {
         try
         {
-            $directorate = Directorate::find($id);
+            $id = $request->get('directorateId');
+            $directorate = Directorate::query()->find($id);
             if (!$directorate)
             {
                 throw new Exception('Directorate not found!');
             }
+/*
+            // departments
+            $departments = $directorate->departments()
+                                       ->get()
+                                       ->map(function (Department $department) {
+                                           return $department->getDetails();
+                                       });
 
-            $data = [
-                'directorate' => $directorate,
-            ];
+            // divisions
+            $divisions = $directorate->divisions()
+                                     ->get()
+                                     ->map(function (Division $division) {
+                                         return $division->getDetails();
+                                     });
+            // sections
+            $sections = $directorate->sections()
+                                    ->get()
+                                    ->map(function (Section $section) {
+                                        return $section->getDetails();
+                                    });
+            // employees
+*/
+            $directorate = $directorate->getDetails();
+//            $directorate->departments = $departments;
+//            $directorate->divisions = $divisions;
+//            $directorate->sections = $sections;
+//            $directorate->employees = $sections;
 
-            return response()->json($data);
+            return response()->json($directorate);
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -84,14 +127,14 @@ class DirectoratesController extends Controller
     {
         try
         {
-            $id = $request->get('directorate_id');
-            $directorate = Directorate::find($id);
+            $id = $request->get('directorateId');
+            $directorate = Directorate::query()->find($id);
             if (!$directorate)
             {
                 throw new Exception("Directorate not found!");
             }
             $directorate->delete();
-            return response()->json('Changes Applied!');
+            return response()->json('Directorate deleted!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);

@@ -20,6 +20,8 @@ class CreateLeaveRecallsTable extends Migration
             $table->unsignedBigInteger('leave_id');
             $table->timestamp('recall_date');
             $table->timestamp('return_date')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

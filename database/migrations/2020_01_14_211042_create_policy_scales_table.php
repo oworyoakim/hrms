@@ -18,6 +18,8 @@ class CreatePolicyScalesTable extends Migration
             $table->unsignedBigInteger('leave_policy_id');
             $table->unsignedBigInteger('salary_scale_id');
             $table->boolean('active')->default(false);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['leave_policy_id','salary_scale_id']);

@@ -20,16 +20,12 @@ use App\Models\LeaveApplicationSetting;
 use App\Models\MaritalStatus;
 use App\Models\Relationship;
 use App\Models\Religion;
-use App\Models\Role;
 use App\Models\Section;
 use App\Models\Title;
-use App\Models\User;
-use Cartalyst\Sentinel\Laravel\Facades\Sentinel;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use stdClass;
 
 class HomeController extends Controller
@@ -95,7 +91,7 @@ class HomeController extends Controller
             return response()->json($data);
         } catch (Exception $ex)
         {
-            return response()->json($ex->getMessage(),Response::HTTP_FORBIDDEN);
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
         }
     }
 
@@ -120,7 +116,7 @@ class HomeController extends Controller
                 $divisionsBuilder->forDirectorate();
                 $sectionsBuilder->forDirectorate();
                 $designationsBuilder->forDirectorate();
-                if ($directorate_id = $request->get('directorate_id'))
+                if ($directorate_id = $request->get('directorateId'))
                 {
                     $departmentsBuilder->where('directorate_id', $directorate_id);
                     $divisionsBuilder->where('directorate_id', $directorate_id);
@@ -129,52 +125,57 @@ class HomeController extends Controller
                 }
             }
 
-            if ($department_id = $request->get('department_id'))
+            if ($department_id = $request->get('departmentId'))
             {
                 $divisionsBuilder->where('department_id', $department_id);
                 $sectionsBuilder->where('department_id', $department_id);
                 $designationsBuilder->where('department_id', $department_id);
             }
-            if ($division_id = $request->get('division_id'))
+            if ($division_id = $request->get('divisionId'))
             {
                 $sectionsBuilder->where('division_id', $division_id);
                 $designationsBuilder->where('division_id', $division_id);
             }
-            if ($section_id = $request->get('section_id'))
+            if ($section_id = $request->get('sectionId'))
             {
                 $designationsBuilder->where('section_id', $section_id);
             }
-            $designations = $designationsBuilder->get(['id', 'title', 'max_holders'])->map(function ($item) {
-                $designation = new stdClass();
-                $designation->id = $item->id;
-                $designation->title = $item->title;
-                $designation->numHolders = $item->holders()->count();
-                $designation->maxHolders = intval($item->max_holders);
-                return $designation;
-            });
+            $designations = $designationsBuilder->get(['id', 'title', 'max_holders', 'directorate_id', 'department_id', 'division_id', 'section_id'])
+                                                ->map(function ($item) {
+                                                    $designation = new stdClass();
+                                                    $designation->id = $item->id;
+                                                    $designation->title = $item->title;
+                                                    $designation->directorateId = $item->directorate_id;
+                                                    $designation->departmentId = $item->department_id;
+                                                    $designation->divisionId = $item->division_id;
+                                                    $designation->sectionId = $item->section_id;
+                                                    $designation->numHolders = $item->holders()->count();
+                                                    $designation->maxHolders = intval($item->max_holders);
+                                                    return $designation;
+                                                });
             $data = [
                 'directorates' => ($scope == 'executive-secretary') ? [] : Directorate::all(['id', 'title']),
-                'departments' => $departmentsBuilder->get(['id', 'title']),
-                'divisions' => $divisionsBuilder->get(['id', 'title']),
-                'sections' => $sectionsBuilder->get(['id', 'title']),
+                'departments' => $departmentsBuilder->get(['id', 'title', 'directorate_id as directorateId']),
+                'divisions' => $divisionsBuilder->get(['id', 'title', 'directorate_id as directorateId', 'department_id as departmentId']),
+                'sections' => $sectionsBuilder->get(['id', 'title', 'directorate_id as directorateId', 'department_id as departmentId', 'division_id as divisionId']),
                 'designations' => $designations,
-                'genders' => Gender::all(['slug', 'title']),
+                'genders' => Gender::all(['id', 'slug', 'title']),
                 'religions' => Religion::all(['id', 'title']),
-                'relationships' => Relationship::all(['id','slug','title']),
+                'relationships' => Relationship::all(['id', 'slug', 'title']),
                 'titles' => Title::all(['id', 'title', 'slug']),
                 'maritalStatuses' => MaritalStatus::all(['id', 'title', 'description']),
-                'employmentTypes' => EmploymentType::all(['slug', 'title']),
-                'employmentTerms' => EmploymentTerm::all(['slug', 'title']),
-                'employmentStatuses' => EmploymentStatus::all(['slug', 'title']),
-                'employeeStatuses' => EmployeeStatus::all(['slug', 'title']),
-                'documentCategories' => DocumentCategory::all(['id', 'title','non_employee'])->map(function($item){
+                'employmentTypes' => EmploymentType::all(['id', 'slug', 'title']),
+                'employmentTerms' => EmploymentTerm::all(['id', 'slug', 'title']),
+                'employmentStatuses' => EmploymentStatus::all(['id', 'slug', 'title']),
+                'employeeStatuses' => EmployeeStatus::all(['id', 'slug', 'title']),
+                'documentCategories' => DocumentCategory::all(['id', 'title', 'non_employee'])->map(function ($item) {
                     $category = new stdClass();
                     $category->id = $item->id;
                     $category->title = $item->title;
                     $category->nonEmployee = !!$item->non_employee;
                     return $category;
                 }),
-                'documentTypes' => DocumentType::all(['id', 'title','category_id as categoryId']),
+                'documentTypes' => DocumentType::all(['id', 'title', 'category_id as categoryId']),
             ];
             return response()->json($data);
         } catch (Exception $ex)

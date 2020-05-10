@@ -21,31 +21,26 @@ $router->get('/', function () use ($router) {
 });
 
 $router->group(['prefix' => 'v1'], function () use ($router) {
+    $router->get('', 'HomeController@getDashboardStatistics');
+    $router->get('dashboard-statistics', 'HomeController@getDashboardStatistics');
     $router->get('form-selections-options', 'HomeController@getFormSelectionsOptions');
 
-    // Designations
-    $router->group(['prefix' => 'designations'], function () use ($router) {
-        $router->get('', 'DesignationsController@index');
-        $router->post('', 'DesignationsController@store');
-        $router->put('', 'DesignationsController@update');
+    // Directorates
+    $router->group(['prefix' => 'directorates'], function () use ($router) {
+        $router->get('', 'DirectoratesController@index');
+        $router->get('show', 'DirectoratesController@show');
+        $router->post('', 'DirectoratesController@store');
+        $router->put('', 'DirectoratesController@update');
+        $router->delete('', 'DirectoratesController@delete');
     });
 
     // Departments
     $router->group(['prefix' => 'departments'], function () use ($router) {
         $router->get('', 'DepartmentsController@index');
-        $router->get('{id}', 'DepartmentsController@show');
+        $router->get('show', 'DepartmentsController@show');
         $router->post('', 'DepartmentsController@store');
         $router->put('', 'DepartmentsController@update');
         $router->delete('', 'DepartmentsController@delete');
-    });
-
-    // Directorates
-    $router->group(['prefix' => 'directorates'], function () use ($router) {
-        $router->get('', 'DirectoratesController@index');
-        $router->get('{id}', 'DirectoratesController@show');
-        $router->post('', 'DirectoratesController@store');
-        $router->put('', 'DirectoratesController@update');
-        $router->delete('', 'DirectoratesController@delete');
     });
 
     // Divisions
@@ -60,10 +55,17 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
     // Sections
     $router->group(['prefix' => 'sections'], function () use ($router) {
         $router->get('', 'SectionsController@index');
-        $router->get('{id}', 'SectionsController@show');
+        $router->get('show', 'SectionsController@show');
         $router->post('', 'SectionsController@store');
         $router->put('', 'SectionsController@update');
         $router->delete('', 'SectionsController@delete');
+    });
+
+    // Designations
+    $router->group(['prefix' => 'designations'], function () use ($router) {
+        $router->get('', 'DesignationsController@index');
+        $router->post('', 'DesignationsController@store');
+        $router->put('', 'DesignationsController@update');
     });
 
 

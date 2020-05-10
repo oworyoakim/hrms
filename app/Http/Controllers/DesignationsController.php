@@ -9,9 +9,9 @@ use App\Models\Division;
 use App\Models\LeaveApplicationSetting;
 use App\Models\Section;
 use Illuminate\Http\Request;
-use Exception;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Exception;
 
 class DesignationsController extends Controller
 {
@@ -19,7 +19,7 @@ class DesignationsController extends Controller
     {
         try
         {
-            $builder = Designation::with(['department', 'directorate', 'salaryScale', 'section']);
+            $builder = Designation::with(['directorate','department', 'division', 'section', 'salaryScale']);
             $scope = $request->get('scope');
             if ($scope == 'executive-secretary')
             {
@@ -52,31 +52,11 @@ class DesignationsController extends Controller
             {
                 $builder->where('section_id', $section_id);
             }
-            $designations = $builder->get()->transform(function ($designation){
-                $leaveApplicationSetting = LeaveApplicationSetting::where('designation_id',$designation->id)->first();
-                if($leaveApplicationSetting){
-                    if($leaveApplicationSetting->verified_by){
-                        $designation->leaveApplicationVerifier = Designation::find($leaveApplicationSetting->verified_by);
-                    }else{
-                        $designation->leaveApplicationVerifier = null;
-                    }
-                    if($leaveApplicationSetting->approved_by){
-                        $designation->leaveApplicationApprover = Designation::find($leaveApplicationSetting->approved_by);
-                    }else{
-                        $designation->leaveApplicationApprover = null;
-                    }
-                    if($leaveApplicationSetting->granted_by){
-                        $designation->leaveApplicationGranter = Designation::find($leaveApplicationSetting->granted_by);
-                    }else{
-                        $designation->leaveApplicationGranter = null;
-                    }
-                }else{
-                    $designation->leaveApplicationVerifier = null;
-                    $designation->leaveApplicationApprover = null;
-                    $designation->leaveApplicationGranter = null;
-                }
-                return $designation;
+
+            $designations = $builder->get()->map(function (Designation $designation){
+                return $designation->getDetails();
             });
+
             return response()->json($designations);
         } catch (Exception $ex)
         {

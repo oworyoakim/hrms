@@ -14,16 +14,19 @@ class ExperienceInfoController extends Controller
     {
         try
         {
-            $employee_id = $request->get('employee_id');
-            if (!$employee_id)
+            $employeeId = $request->get('employeeId');
+            if (!$employeeId)
             {
                 throw new Exception('Employee required!');
             }
             $experiences = Experience::query()
-                                     ->where('employee_id', $employee_id)
+                                     ->where('employee_id', $employeeId)
                                      ->get()
+                                    ->map(function (Experience $experience){
+                                        return $experience->getDetails();
+                                    })
                                      ->sortByDesc(function ($experience) {
-                                         $endDate = Carbon::make("{$experience->end_year} {$experience->end_month}");
+                                         $endDate = Carbon::make("{$experience->endYear} {$experience->endMonth}");
                                          return $endDate ?? Carbon::today();
                                      })
                                      ->values();
@@ -38,7 +41,17 @@ class ExperienceInfoController extends Controller
     {
         try
         {
-            $employee_id = $request->get('employee_id');
+            $rules = [
+                'company' => 'required',
+                'position' => 'required',
+                'description' => 'required',
+                'startMonth' => 'required',
+                'startYear' => 'required',
+                'employeeId' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+            $employee_id = $request->get('employeeId');
             if (!$employee_id)
             {
                 throw new Exception('Employee required!');
@@ -48,12 +61,12 @@ class ExperienceInfoController extends Controller
                 'company' => $request->get('company'),
                 'position' => $request->get('position'),
                 'description' => $request->get('description'),
-                'start_month' => $request->get('start_month'),
-                'start_year' => $request->get('start_year'),
-                'end_month' => $request->get('end_month'),
-                'end_year' => $request->get('end_year'),
+                'start_month' => $request->get('startMonth'),
+                'start_year' => $request->get('startYear'),
+                'end_month' => $request->get('endMonth'),
+                'end_year' => $request->get('endYear'),
             ];
-            $experience = Experience::query()->create($data);
+            Experience::query()->create($data);
             return response()->json("Record Saved!");
         } catch (Exception $ex)
         {
@@ -65,8 +78,19 @@ class ExperienceInfoController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'company' => 'required',
+                'position' => 'required',
+                'description' => 'required',
+                'startMonth' => 'required',
+                'startYear' => 'required',
+                'employeeId' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $id = $request->get('id');
-            $employee_id = $request->get('employee_id');
+            $employee_id = $request->get('employeeId');
             if (!$employee_id)
             {
                 throw new Exception('Employee required!');
@@ -84,10 +108,10 @@ class ExperienceInfoController extends Controller
             $experience->company = $request->get('company');
             $experience->position = $request->get('position');
             $experience->description = $request->get('description');
-            $experience->start_month = $request->get('start_month');
-            $experience->start_year = $request->get('start_year');
-            $experience->end_month = $request->get('end_month');
-            $experience->end_year = $request->get('end_year');
+            $experience->start_month = $request->get('startMonth');
+            $experience->start_year = $request->get('startYear');
+            $experience->end_month = $request->get('endMonth');
+            $experience->end_year = $request->get('endYear');
             $experience->save();
 
             return response()->json("Record Saved!");

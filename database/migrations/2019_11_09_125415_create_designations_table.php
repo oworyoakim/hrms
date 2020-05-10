@@ -28,6 +28,8 @@ class CreateDesignationsTable extends Migration
             $table->text('description')->nullable();
             $table->unsignedTinyInteger('max_holders')->default(1);
             $table->boolean('active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

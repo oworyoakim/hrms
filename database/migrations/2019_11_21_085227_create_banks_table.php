@@ -21,6 +21,8 @@ class CreateBanksTable extends Migration
             $table->string('account_name');
             $table->string('account_number');
             $table->string('swift_code')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

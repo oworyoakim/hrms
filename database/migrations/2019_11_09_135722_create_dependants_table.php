@@ -24,6 +24,8 @@ class CreateDependantsTable extends Migration
             $table->enum('gender',['male','female','other'])->nullable();
             $table->unsignedBigInteger('employee_id');
             $table->unsignedInteger('relationship_id');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

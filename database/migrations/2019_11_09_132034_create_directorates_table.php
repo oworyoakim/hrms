@@ -18,6 +18,8 @@ class CreateDirectoratesTable extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->boolean('active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

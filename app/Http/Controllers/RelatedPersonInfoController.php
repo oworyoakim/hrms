@@ -14,20 +14,16 @@ class RelatedPersonInfoController extends Controller
     {
         try
         {
-            $employee_id = $request->get('employee_id');
-            if (!$employee_id)
+            $employeeId = $request->get('employeeId');
+            if (!$employeeId)
             {
                 throw new Exception('Employee required!');
             }
             $persons = RelatedPerson::query()
-                                    ->where('employee_id', $employee_id)
+                                    ->where('employee_id', $employeeId)
                                     ->get()
                                     ->map(function (RelatedPerson $person) {
-                                        $person->fullName = $person->fullName();
-                                        $contacts = $person->contacts()->get();
-                                        $person->email = $contacts->implode('email', ', ');
-                                        $person->mobile = $contacts->implode('mobile', ', ');
-                                        return $person;
+                                        return $person->getDetails();
                                     });
             return response()->json($persons);
         } catch (Exception $ex)
@@ -40,36 +36,40 @@ class RelatedPersonInfoController extends Controller
     {
         try
         {
-            $employee_id = $request->get('employee_id');
-            if (!$employee_id)
+            $rules = [
+                'title' => 'required',
+                'firstName' => 'required',
+                'lastName' => 'required',
+                'gender' => 'required',
+                'relationshipId' => 'required',
+                'employeeId' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+            $employeeId = $request->get('employeeId');
+            if (!$employeeId)
             {
                 throw new Exception('Employee required!');
             }
             $data = [
-                'employee_id' => $employee_id,
+                'employee_id' => $employeeId,
                 'title' => $request->get('title'),
-                'first_name' => $request->get('first_name'),
-                'last_name' => $request->get('last_name'),
-                'middle_name' => $request->get('middle_name'),
+                'first_name' => $request->get('firstName'),
+                'last_name' => $request->get('lastName'),
+                'middle_name' => $request->get('middleName'),
                 'gender' => $request->get('gender'),
-                'relationship_id' => $request->get('relationship_id'),
+                'phone' => $request->get('phone'),
+                'email' => $request->get('email'),
+                'relationship_id' => $request->get('relationshipId'),
                 'dob' => $request->get('dob'),
                 'nin' => $request->get('nin'),
                 'dependant' => $request->get('dependant'),
                 'emergency' => $request->get('emergency'),
-                'is_next_of_kin' => $request->get('is_next_of_kin'),
+                'is_next_of_kin' => $request->get('isNextOfKin'),
+                'created_by' => $request->get('userId'),
             ];
-            $person = RelatedPerson::query()->create($data);
-            $email = $request->get('email');
-            $mobile = $request->get('mobile');
-            if ($mobile || $email)
-            {
-                $person->contacts()->save(new Contact([
-                    'mobile' => $mobile,
-                    'email' => $email
-                ]));
-            }
-            return response()->json("Record Saved!");
+            RelatedPerson::query()->create($data);
+            return response()->json("Related person info created!");
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -80,14 +80,24 @@ class RelatedPersonInfoController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'firstName' => 'required',
+                'lastName' => 'required',
+                'gender' => 'required',
+                'relationshipId' => 'required',
+                'employeeId' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $id = $request->get('id');
-            $employee_id = $request->get('employee_id');
-            if (!$employee_id)
+            $employeeId = $request->get('employeeId');
+            if (!$employeeId)
             {
                 throw new Exception('Employee required!');
             }
 
-            $person = RelatedPerson::query()->where('employee_id', $employee_id)->find($id);
+            $person = RelatedPerson::query()->where('employee_id', $employeeId)->find($id);
 
             if (!$person)
             {
@@ -95,37 +105,22 @@ class RelatedPersonInfoController extends Controller
             }
 
             $person->title = $request->get('title');
-            $person->first_name = $request->get('first_name');
-            $person->last_name = $request->get('last_name');
-            $person->middle_name = $request->get('middle_name');
+            $person->first_name = $request->get('firstName');
+            $person->last_name = $request->get('lastName');
+            $person->middle_name = $request->get('middleName');
             $person->gender = $request->get('gender');
-            $person->relationship_id = $request->get('relationship_id');
+            $person->relationship_id = $request->get('relationshipId');
             $person->dob = $request->get('dob');
             $person->nin = $request->get('nin');
             $person->dependant = $request->get('dependant');
             $person->emergency = $request->get('emergency');
-            $person->is_next_of_kin = $request->get('is_next_of_kin');
+            $person->is_next_of_kin = $request->get('isNextOfKin');
+            $person->email = $request->get('email');
+            $person->phone = $request->get('phone');
+            $person->updated_by = $request->get('userId');
             $person->save();
 
-            $email = $request->get('email');
-            $mobile = $request->get('mobile');
-            if ($mobile && $contact = $person->contacts()->where('type', 'personal')->where('mobile', $mobile)->first())
-            {
-                $contact->email = $email;
-                $contact->save();
-            } elseif ($email && $contact = $person->contacts()->where('type', 'personal')->where('email', $email)->first())
-            {
-                $contact->mobile = $mobile;
-                $contact->save();
-            } else
-            {
-                $person->contacts()->save(new Contact([
-                    'mobile' => $mobile,
-                    'email' => $email
-                ]));
-            }
-
-            return response()->json("Record Saved!");
+            return response()->json("Related person info updated!");
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);

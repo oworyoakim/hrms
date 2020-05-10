@@ -22,7 +22,10 @@ class CreateLeaveTrackersTable extends Migration
             $table->unsignedBigInteger('leave_application_id');
             $table->date('date_on_leave');
             $table->enum('status',['onleave','recalled'])->default('onleave');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

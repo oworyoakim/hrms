@@ -21,6 +21,8 @@ class CreateLeaveSettingsTable extends Migration
             $table->boolean('earned_leave')->default(false);
             $table->boolean('carry_forward')->default(false);
             $table->unsignedInteger('max_carry_forward_duration')->default(0);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

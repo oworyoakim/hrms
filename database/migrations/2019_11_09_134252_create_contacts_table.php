@@ -22,6 +22,8 @@ class CreateContactsTable extends Migration
             $table->string('fax')->nullable();
             $table->string('extension')->nullable();
             $table->enum('type',['personal','home','work'])->default('personal');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

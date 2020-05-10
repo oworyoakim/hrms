@@ -28,6 +28,11 @@ class Designation extends Model
         return $this->belongsTo(SalaryScale::class, 'salary_scale_id');
     }
 
+    public function division()
+    {
+        return $this->belongsTo(Division::class, 'division_id');
+    }
+
     public function section()
     {
         return $this->belongsTo(Section::class, 'section_id');
@@ -68,11 +73,10 @@ class Designation extends Model
         return $query->where('active', false);
     }
 
-    /**
-     * @return \Illuminate\Database\Eloquent\Collection|\Illuminate\Support\Collection
-     */
-    public function getHolders(){
-        return $this->holders()->get()->map(function ($holder){
+
+    public function getHolders()
+    {
+        return $this->holders()->get()->map(function ($holder) {
             $employee = new stdClass();
             $employee->id = $holder->id;
             $employee->name = $holder->fullName();
@@ -83,6 +87,91 @@ class Designation extends Model
             $employee->designation->title = $this->title;
             return $employee;
         });
+    }
+
+    public function getDetails()
+    {
+        $designation = new stdClass();
+        $designation->id = $this->id;
+        $designation->title = $this->title;
+        $designation->description = $this->description;
+        $designation->probational = !!$this->probational;
+        $designation->probationPeriod = $this->probation_period;
+        $designation->summary = $this->summary;
+        $designation->maxHolders = $this->max_holders;
+        $designation->holders = $this->getHolders();
+        $designation->active = !!$this->active;
+
+        $designation->supervisorId = $this->supervisor_id;
+        // avoid infinite loop
+        $designation->supervisor = ($this->supervisor && $this->supervisor_id != $this->id) ? $this->supervisor->getDetails() : null;
+
+        $designation->subordinates = $this->subordinates()
+                                          ->get()
+                                          ->filter(function (Designation $subordinate) {
+                                              return $subordinate->id != $this->id; // avoid infinite loop
+                                          })
+                                          ->map(function (Designation $subordinate) {
+                                              return $subordinate->getDetails();
+                                          });
+
+        $designation->directorateId = $this->directorate_id ?: null;
+        $designation->directorate = $this->directorate ? $this->directorate->getDetails() : null;
+
+        $designation->departmentId = $this->department_id ?: null;
+        $designation->department = $this->department ? $this->department->getDetails() : null;
+
+        $designation->divisionId = $this->division_id ?: null;
+        $designation->division = $this->division ? $this->division->getDetails() : null;
+
+        $designation->sectionId = $this->section_id ?: null;
+        $designation->section = $this->section ? $this->section->getDetails() : null;
+
+        $designation->salaryScaleId = $this->salary_scale_id ?: null;
+        $designation->salaryScale = $this->salaryScale ? $this->salaryScale->getDetails() : null;
+
+        $designation->createdBy = $this->created_by;
+        $designation->updatedBy = $this->updated_by;
+        $designation->createdAt = $this->created_at->toDateString();
+        $designation->updatedAt = $this->updated_at->toDateString();
+
+        $leaveApplicationSetting = LeaveApplicationSetting::query()->where('designation_id', $this->id)->first();
+        $designation->leaveApplicationVerifier = null;
+        $designation->leaveApplicationApprover = null;
+        $designation->leaveApplicationGranter = null;
+
+        if ($leaveApplicationSetting)
+        {
+            // avoid infinite loop
+            if ($leaveApplicationSetting->verified_by != $this->id)
+            {
+                $leaveApplicationsVerifier = Designation::query()->find($leaveApplicationSetting->verified_by);
+                if ($leaveApplicationsVerifier)
+                {
+                    $designation->leaveApplicationVerifier = $leaveApplicationsVerifier->getDetails();
+                }
+            }
+            // avoid infinite loop
+            if ($leaveApplicationSetting->approved_by != $this->id)
+            {
+                $leaveApplicationApprover = Designation::query()->find($leaveApplicationSetting->approved_by);
+                if ($leaveApplicationApprover)
+                {
+                    $designation->leaveApplicationApprover = $leaveApplicationApprover->getDetails();
+                }
+            }
+            // avoid infinite loop
+            if ($leaveApplicationSetting->granted_by != $this->id)
+            {
+                $leaveApplicationGranter = Designation::query()->find($leaveApplicationSetting->granted_by);
+                if ($leaveApplicationGranter)
+                {
+                    $designation->leaveApplicationGranter = $leaveApplicationGranter->getDetails();
+                }
+            }
+        }
+
+        return $designation;
     }
 
 }

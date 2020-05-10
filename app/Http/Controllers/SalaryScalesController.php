@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\SalaryScale;
 use Illuminate\Http\Request;
-use Exception;
 use Illuminate\Http\Response;
+use Exception;
 
 class SalaryScalesController extends Controller
 {
@@ -14,8 +14,10 @@ class SalaryScalesController extends Controller
     {
         try
         {
-            $data = SalaryScale::all();
-            return response()->json($data);
+            $salaryScales = SalaryScale::all()->map(function (SalaryScale $scale){
+                return $scale->getDetails();
+            });
+            return response()->json($salaryScales);
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -26,13 +28,20 @@ class SalaryScalesController extends Controller
     {
         try
         {
+            $rules = [
+                'scale' => 'required',
+                'rank' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $data = [
                 'scale' => $request->get('scale'),
                 'rank' => $request->get('rank'),
                 'description' => $request->get('description'),
+                'created_by' => $request->get('userId'),
             ];
-            SalaryScale::create($data);
-            return response()->json('Record Saved!');
+            SalaryScale::query()->create($data);
+            return response()->json('Salary scale created!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -43,17 +52,30 @@ class SalaryScalesController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'scale' => 'required',
+                'rank' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+
             $id = $request->get('id');
-            $sscale = SalaryScale::find($id);
-            if (!$sscale)
+            $salaryScale = SalaryScale::query()->find($id);
+
+            if (!$salaryScale)
             {
                 throw new Exception("Salary scale not found!");
             }
-            $sscale->scale = $request->get('scale');
-            $sscale->rank = $request->get('rank');
-            $sscale->description = $request->get('description');
-            $sscale->save();
-            return response()->json('Changes Applied!');
+
+            $salaryScale->scale = $request->get('scale');
+            $salaryScale->rank = $request->get('rank');
+            $salaryScale->description = $request->get('description');
+            $salaryScale->updated_by = $request->get('userId');
+
+            $salaryScale->save();
+
+            return response()->json('Salary scale updated!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -64,8 +86,8 @@ class SalaryScalesController extends Controller
     {
         try
         {
-            $id = $request->get('salary_scale_id');
-            $salaryScale = SalaryScale::find($id);
+            $id = $request->get('salaryScaleId');
+            $salaryScale = SalaryScale::query()->find($id);
 
             if (!$salaryScale)
             {
@@ -74,7 +96,7 @@ class SalaryScalesController extends Controller
 
             $salaryScale->delete();
 
-            return response()->json('Changes Applied!');
+            return response()->json('Salary scale deleted!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);

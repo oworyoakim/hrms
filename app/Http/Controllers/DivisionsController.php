@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Department;
 use App\Models\Division;
+use App\Models\Section;
 use Illuminate\Http\Request;
 use Exception;
 use Illuminate\Http\Response;
@@ -15,7 +16,7 @@ class DivisionsController extends Controller
     {
         try
         {
-            $builder = Division::with(['directorate', 'department']);
+            $builder = Division::query();
             $scope = $request->get('scope');
             if ($scope == 'executive-secretary')
             {
@@ -23,18 +24,20 @@ class DivisionsController extends Controller
             } else
             {
                 $builder->forDirectorate();
-                $directorate_id = $request->get('directorate_id');
-                if ($directorate_id)
+                $directorateId = $request->get('directorateId');
+                if ($directorateId)
                 {
-                    $builder->where('directorate_id', $directorate_id);
+                    $builder->where('directorate_id', $directorateId);
                 }
             }
-            $department_id = $request->get('department_id');
-            if ($department_id)
+            $departmentId = $request->get('departmentId');
+            if ($departmentId)
             {
-                $builder->where('department_id', $department_id);
+                $builder->where('department_id', $departmentId);
             }
-            $divisions = $builder->get();
+            $divisions = $builder->get()->map(function (Division $division) {
+                return $division->getDetails();
+            });
             return response()->json($divisions);
         } catch (Exception $ex)
         {
@@ -42,11 +45,76 @@ class DivisionsController extends Controller
         }
     }
 
-    public function show(Request $request, $id)
+    public function store(Request $request)
     {
         try
         {
-            $builder = Division::with(['directorate', 'department', 'sections']);
+            $rules = [
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+            Division::query()->create([
+                'title' => $request->get('title'),
+                'description' => $request->get('description'),
+                'directorate_id' => $request->get('directorateId'),
+                'department_id' => $request->get('departmentId'),
+                'created_by' => $request->get('userId'),
+            ]);
+            return response()->json('Division created!');
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
+    public function update(Request $request)
+    {
+        try
+        {
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+
+            $id = $request->get('id');
+            $division = Division::query()->find($id);
+            if (!$division)
+            {
+                throw new Exception('Division not found!');
+            }
+
+            $division->title = $request->get('title');
+            $division->description = $request->get('description');
+            $division->updated_by = $request->get('userId');
+            $directorateId = $request->get('directorateId');
+
+            if (!empty($directorateId) && $directorateId != $division->directorate_id)
+            {
+                $division->directorate_id = $directorateId;
+            }
+            $departmentId = $request->get('departmentId');
+            if (!empty($departmentId) && $departmentId != $division->department_id)
+            {
+                $division->department_id = $departmentId;
+            }
+
+            $division->save();
+            return response()->json('Division updated!');
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
+    public function show(Request $request)
+    {
+        try
+        {
+            $id = $request->get('divisionId');
+            $builder = Division::query();
             $scope = $request->get('scope');
             if ($scope == 'executive-secretary')
             {
@@ -60,11 +128,16 @@ class DivisionsController extends Controller
             {
                 throw new Exception('Division not found!');
             }
-            $data = [
-                'division' => $division,
-                'scope' => $scope,
-            ];
-            return response()->json($data);
+            /*
+            $sections = $division->sections()->get()->map(function (Section $section) {
+                return $section->getDetails();
+            });
+            */
+
+            $division = $division->getDetails();
+            //$division->sections = $sections;
+
+            return response()->json($division);
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -75,7 +148,7 @@ class DivisionsController extends Controller
     {
         try
         {
-            $id = $request->get('division_id');
+            $id = $request->get('divisionId');
             $division = Division::find($id);
             if (!$division)
             {

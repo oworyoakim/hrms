@@ -27,6 +27,10 @@ class CreateRelatedPersonsTable extends Migration
             $table->boolean('emergency')->default(false);
             $table->boolean('dependant')->default(false);
             $table->boolean('is_next_of_kin')->default(false);
+            $table->string('phone')->nullable();
+            $table->string('email')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Department;
+use App\Models\Division;
+use App\Models\Section;
 use Illuminate\Http\Request;
-use Exception;
 use Illuminate\Http\Response;
+use Exception;
 
 class DepartmentsController extends Controller
 {
@@ -13,7 +15,7 @@ class DepartmentsController extends Controller
     {
         try
         {
-            $builder = Department::with(['directorate']);
+            $builder = Department::query();
             $scope = $request->get('scope');
             if ($scope == 'executive-secretary')
             {
@@ -21,12 +23,15 @@ class DepartmentsController extends Controller
             } else
             {
                 $builder->forDirectorate();
-                if ($directorate_id = $request->get('directorate_id'))
+                $directorateId = $request->get('directorateId');
+                if (!empty($directorateId))
                 {
-                    $builder->where('directorate_id', $directorate_id);
+                    $builder->where('directorate_id', $directorateId);
                 }
             }
-            $departments = $builder->get();
+            $departments = $builder->get()->map(function (Department $department) {
+                return $department->getDetails();
+            });
             return response()->json($departments);
         } catch (Exception $ex)
         {
@@ -38,13 +43,19 @@ class DepartmentsController extends Controller
     {
         try
         {
+            $rules = [
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $data = [
                 'title' => $request->get('title'),
                 'description' => $request->get('description'),
-                'directorate_id' => $request->get('directorate_id'),
+                'directorate_id' => $request->get('directorateId'),
+                'created_by' => $request->get('userId'),
             ];
-            Department::create($data);
-            return response()->json('Record Saved!');
+            Department::query()->create($data);
+            return response()->json('Department created!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -55,8 +66,15 @@ class DepartmentsController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+
             $id = $request->get('id');
-            $department = Department::find($id);
+            $department = Department::query()->find($id);
             if (!$department)
             {
                 throw new Exception('Department not found!');
@@ -64,25 +82,29 @@ class DepartmentsController extends Controller
 
             $department->title = $request->get('title');
             $department->description = $request->get('description');
+            $department->updated_by = $request->get('userId');
 
-            if($directorate_id = $request->get('directorate_id'))
+            $directorateId = $request->get('directorateId');
+            if (!empty($directorateId) && $directorateId != $department->directorate_id)
             {
-                $department->directorate_id = $directorate_id;
+                $department->directorate_id = $directorateId;
             }
+
             $department->save();
 
-            return response()->json('Changes Applied!');
+            return response()->json('Department updated!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
         }
     }
 
-    public function show(Request $request, $id)
+    public function show(Request $request)
     {
         try
         {
-            $builder = Department::with(['directorate', 'sections']);
+            $id = $request->get('departmentId');
+            $builder = Department::query();
             $scope = $request->get('scope');
             if ($scope == 'executive-secretary')
             {
@@ -92,14 +114,32 @@ class DepartmentsController extends Controller
                 $builder->forDirectorate();
             }
             $department = $builder->find($id);
-            if(!$department){
+            if (!$department)
+            {
                 throw new Exception("Department not found!");
             }
-            $data = ['department' => $department, 'scope' => $scope];
-            return response()->json($data);
+            /*
+                        $divisions = $department->divisions()
+                                                ->get()
+                                                ->map(function (Division $division) {
+                                                    return $division->getDetails();
+                                                });
+
+                        $sections = $department->sections()
+                                               ->get()
+                                               ->map(function (Section $section) {
+                                                   return $section->getDetails();
+                                               });
+
+            */
+            $department = $department->getDetails();
+            //$department->sections = $sections;
+            //$department->divisions = $divisions;
+
+            return response()->json($department);
         } catch (Exception $ex)
         {
-            return response()->json($ex->getMessage(),Response::HTTP_FORBIDDEN);
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
         }
     }
 
@@ -107,14 +147,14 @@ class DepartmentsController extends Controller
     {
         try
         {
-            $id = $request->get('department_id');
-            $department = Department::find($id);
+            $id = $request->get('departmentId');
+            $department = Department::query()->find($id);
             if (!$department)
             {
                 throw new Exception("Department not found!");
             }
             $department->delete();
-            return response()->json('Changes Applied!');
+            return response()->json('Department deleted!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);

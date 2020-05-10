@@ -23,6 +23,8 @@ class CreateDelegationsTable extends Migration
             $table->text('reason')->nullable();
             $table->text('permissions')->nullable();
             $table->boolean('active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

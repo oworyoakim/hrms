@@ -19,7 +19,9 @@ class CreateLeaveApplicationSettingsTable extends Migration
             $table->unsignedBigInteger('verified_by')->nullable();
             $table->unsignedBigInteger('approved_by')->nullable();
             $table->unsignedBigInteger('granted_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

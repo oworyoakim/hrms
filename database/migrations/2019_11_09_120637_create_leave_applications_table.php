@@ -21,6 +21,8 @@ class CreateLeaveApplicationsTable extends Migration
             $table->date('end_date');
             $table->unsignedInteger('duration');
             $table->enum('status',['pending','verified','approved','declined','granted','rejected','expired'])->default('pending');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

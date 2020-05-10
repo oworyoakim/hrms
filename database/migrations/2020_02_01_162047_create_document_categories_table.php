@@ -17,7 +17,10 @@ class CreateDocumentCategoriesTable extends Migration
             $table->bigIncrements('id');
             $table->string('title');
             $table->boolean('non_employee')->default(false);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

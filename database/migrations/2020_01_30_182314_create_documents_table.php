@@ -23,6 +23,8 @@ class CreateDocumentsTable extends Migration
             $table->string('path')->nullable();
             $table->unsignedBigInteger('document_category_id');
             $table->unsignedBigInteger('document_type_id')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

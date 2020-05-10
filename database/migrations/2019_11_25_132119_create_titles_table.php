@@ -17,6 +17,8 @@ class CreateTitlesTable extends Migration
             $table->bigIncrements('id');
             $table->string('slug')->unique();
             $table->string('title');
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

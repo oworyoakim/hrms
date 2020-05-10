@@ -24,6 +24,8 @@ class CreateEducationsTable extends Migration
             $table->string('end_month')->nullable();
             $table->year('end_year')->nullable();
             $table->string('certificate_path')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

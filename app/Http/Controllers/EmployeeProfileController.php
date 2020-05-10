@@ -7,8 +7,8 @@ use App\Models\Employee;
 use App\Models\Relationship;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Validator;
 use Exception;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeProfileController extends Controller
 {
@@ -22,62 +22,53 @@ class EmployeeProfileController extends Controller
                 throw new Exception("Username is missing!");
             }
 
-            $employee = Employee::with([
-                'designation',
-                'department',
-                'directorate'
-            ])->where('username', $username)->first();
+            $employee = Employee::query()->where('username', $username)->first();
 
             if (!$employee)
             {
                 throw new Exception("Employee {$username} not found!");
             }
 
-            $employee->personalStatement = "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Iste qui repudiandae praesentium quo placeat officia impedit est saepe sunt, ad earum quidem esse voluptates tenetur error quasi sapiente quisquam sequi. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Assumenda sit, quaerat, id deleniti quod amet asperiores perspiciatis earum sed commodi optio sequi nisi ut unde nostrum et harum voluptatibus facilis.";
-
-            $employee->full_name = $employee->fullName();
-            $employee->subordinates = $employee->subordinates();
-
             $contacts = $employee->contacts()
-                                 ->where(function ($query) {
-                                     $query->whereNotNull('email')
-                                           ->orWhereNotNull('mobile');
-                                 })
                                  ->where('type', 'personal')
-                                 ->get();
-            $employee->contacts = $contacts;
-            $employee->mobile = $contacts->implode('mobile', ', ');
+                                 ->get()
+                                 ->map(function (Contact $contact) {
+                                     return $contact->getDetails();
+                                 });
 
-            $employee->supervisor = $employee->supervisor();
 
-            if ($employee->supervisor)
-            {
-                $employee->supervisor->full_name = $employee->supervisor->fullName();
-            }
 
             $sonRelationship = Relationship::whereSlug('son')->first();
             $daughterRelationship = Relationship::whereSlug('daughter')->first();
             if ($sonRelationship)
             {
-                $employee->number_of_sons = $employee->relatedPersons()
-                                                     ->where('relationship_id', $sonRelationship->id)
-                                                     ->count();
+                $numSons = $employee->relatedPersons()
+                                    ->where('relationship_id', $sonRelationship->id)
+                                    ->count();
             } else
             {
-                $employee->number_of_sons = 0;
+                $numSons = 0;
             }
 
             if ($daughterRelationship)
             {
-                $employee->number_of_daughters = $employee->relatedPersons()
-                                                          ->where('relationship_id', $daughterRelationship->id)
-                                                          ->count();
+                $numDaughters = $employee->relatedPersons()
+                                         ->where('relationship_id', $daughterRelationship->id)
+                                         ->count();
             } else
             {
-                $employee->number_of_daughters = 0;
+                $numDaughters = 0;
             }
 
-            $employee->number_of_children = $employee->number_of_sons + $employee->number_of_daughters;
+
+            $employee = $employee->getDetails();
+            $employee->numSons = $numSons;
+            $employee->numDaughters = $numDaughters;
+            $employee->numChildren = $numSons + $numDaughters;
+            $employee->contacts = $contacts;
+
+            $employee->personalStatement = "Lorem ipsum, dolor sit amet consectetur adipisicing elit. Iste qui repudiandae praesentium quo placeat officia impedit est saepe sunt, ad earum quidem esse voluptates tenetur error quasi sapiente quisquam sequi. Lorem, ipsum dolor sit amet consectetur adipisicing elit. Assumenda sit, quaerat, id deleniti quod amet asperiores perspiciatis earum sed commodi optio sequi nisi ut unde nostrum et harum voluptatibus facilis.";
+
 
             return response()->json($employee);
         } catch (Exception $ex)
@@ -108,50 +99,57 @@ class EmployeeProfileController extends Controller
 
             $email = $request->get('email');
             $mobile = $request->get('mobile');
+            //$employee->email = $email;
 
             $employee->nin = $request->get('nin');
             $employee->passport = $request->get('passport');
-            // $employee->email = $email;
             $employee->gender = $request->get('gender');
-            $employee->marital_status_id = $request->get('marital_status_id');
-            $employee->religion_id = $request->get('religion_id');
+            $employee->marital_status = $request->get('maritalStatus');
+            $employee->religion = $request->get('religion');
 
             if ($avatar = $request->get('avatar'))
             {
                 $employee->avatar = $avatar;
             }
 
+            DB::beginTransaction();
             $employee->save();
 
-            if (
-                $mobile && $contact = $employee->contacts()
-                                               ->where('type', 'personal')
-                                               ->where('mobile', $mobile)
-                                               ->first()
-            )
-            {
-                $contact->email = $email;
-                $contact->save();
-            } elseif (
-                $email && $contact = $employee->contacts()
-                                              ->where('type', 'personal')
-                                              ->where('email', $email)
-                                              ->first()
-            )
-            {
-                $contact->mobile = $mobile;
-                $contact->save();
-            } else
+            $contact = $employee->contacts()
+                                ->where('type', 'personal')
+                                ->where('mobile', $mobile)
+                                ->first();
+            if (empty($contact))
             {
                 $employee->contacts()->save(new Contact([
                     'mobile' => $mobile,
-                    'email' => $email
                 ]));
             }
-
+            /*
+            else
+            {
+                $contact = $employee->contacts()
+                                    ->where('type', 'personal')
+                                    ->where('email', $email)
+                                    ->first();
+                if (!empty($email) && !empty($contact))
+                {
+                    $contact->mobile = $mobile;
+                    $contact->save();
+                } else
+                {
+                    $employee->contacts()->save(new Contact([
+                        'mobile' => $mobile,
+                        'email' => $email
+                    ]));
+                }
+            }
+            */
+            DB::commit();
             return response()->json('Profile updated!');
         } catch (Exception $ex)
         {
+            DB::rollBack();
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
         }
     }

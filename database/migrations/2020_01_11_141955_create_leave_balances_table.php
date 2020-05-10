@@ -24,6 +24,8 @@ class CreateLeaveBalancesTable extends Migration
             $table->unsignedTinyInteger('entitlement')->nullable();
             $table->unsignedTinyInteger('taken')->nullable();
             $table->unsignedTinyInteger('balance')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

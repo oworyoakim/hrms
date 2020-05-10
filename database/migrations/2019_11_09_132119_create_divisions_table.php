@@ -19,6 +19,8 @@ class CreateDivisionsTable extends Migration
             $table->unsignedBigInteger('department_id')->nullable();
             $table->string('title');
             $table->text('description')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

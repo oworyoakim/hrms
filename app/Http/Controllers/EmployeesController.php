@@ -21,17 +21,17 @@ class EmployeesController extends Controller
     {
         try
         {
-            $builder = Employee::with(['designation', 'department', 'directorate']);
+            $builder = Employee::query();
             $name = $request->get('name');
-            $status = $request->get('status');
-            $employment_status = $request->get('employment_status');
-            $employment_term = $request->get('employment_term');
-            $employment_type = $request->get('employment_type');
-            $designation_id = $request->get('designation_id');
-            $department_id = $request->get('department_id');
-            $directorate_id = $request->get('directorate_id');
-            $division_id = $request->get('division_id');
-            $section_id = $request->get('section_id');
+            $status = $request->get('employeeStatus');
+            $employment_status = $request->get('employmentStatus');
+            $employment_term = $request->get('employmentTerm');
+            $employment_type = $request->get('employmentType');
+            $designation_id = $request->get('designationId');
+            $department_id = $request->get('departmentId');
+            $directorate_id = $request->get('directorateId');
+            $division_id = $request->get('divisionId');
+            $section_id = $request->get('sectionId');
             $scope = $request->get('scope');
             $gender = $request->get('gender');
             if ($scope == 'executive-secretary')
@@ -97,10 +97,9 @@ class EmployeesController extends Controller
             }
 
             $employees = $builder->get()
-                                 ->map(function (Employee $emp) {
+                                 ->map(function (Employee $employee) {
                                      // transform the employee object here
-                                     $emp->fullName = $emp->fullName();
-                                     return $emp;
+                                     return $employee->getDetails();
                                  });
             return response()->json($employees);
         } catch (Exception $ex)
@@ -113,11 +112,22 @@ class EmployeesController extends Controller
     {
         try
         {
+            $rules = [
+                'title' => 'required',
+                'firstName' => 'required',
+                'lastName' => 'required',
+                'username' => 'required|unique:employees',
+                'employeeNumber' => 'required|unique:employees,employee_number',
+                'designationId' => 'required',
+                'userId' => 'required|unique:employees,user_id',
+                'createdBy' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $username = $request->get('username');
-            $first_name = $request->get('first_name');
-            $last_name = $request->get('last_name');
+            $first_name = $request->get('firstName');
+            $last_name = $request->get('lastName');
 
-            $designation_id = $request->get('designation_id');
+            $designation_id = $request->get('designationId');
 
             if (!$designation_id)
             {
@@ -139,7 +149,7 @@ class EmployeesController extends Controller
             DB::beginTransaction();
 
             $data = [
-                'user_id' => $request->get('user_id'),
+                'user_id' => $request->get('userId'),
                 'directorate_id' => $designation->directorate_id,
                 'department_id' => $designation->department_id,
                 'division_id' => $designation->division_id,
@@ -150,19 +160,19 @@ class EmployeesController extends Controller
                 'first_name' => $first_name,
                 'last_name' => $last_name,
                 'title' => $request->get('title'),
-                'middle_name' => $request->get('middle_name'),
+                'middle_name' => $request->get('middleName'),
                 'gender' => $request->get('gender'),
-                'religion_id' => $request->get('religion_id'),
+                'religion' => $request->get('religion'),
                 'dob' => Carbon::parse($request->get('dob')),
                 'nin' => $request->get('nin'),
                 'nssf' => $request->get('nssf'),
                 'tin' => $request->get('tin'),
-                'employee_status' => $request->get('employee_status') ?: 'active',
-                'employee_number' => $request->get('employee_number'),
-                'employment_term' => $request->get('employment_term'),
-                'employment_type' => $request->get('employment_type'),
-                'date_joined' => Carbon::parse($request->get('date_joined')),
-                'created_by' => $request->get('created_by'),
+                'employee_status' => $request->get('employeeStatus') ?: 'active',
+                'employee_number' => $request->get('employeeNumber'),
+                'employment_term' => $request->get('employmentTerm'),
+                'employment_type' => $request->get('employmentType'),
+                'date_joined' => Carbon::parse($request->get('dateJoined')),
+                'created_by' => $request->get('createdBy'),
                 'avatar' => '/images/avatar.png',
             ];
 
@@ -171,12 +181,12 @@ class EmployeesController extends Controller
             {
                 throw new Exception('Failed to create employee!');
             }
-            $action = EmploymentAction::where('title', 'Appointment')->first();
+            $action = EmploymentAction::query()->where('title', 'Appointment')->first();
             if (!$action)
             {
                 throw new Exception('Employee creation action rejected. Contact admin for help!');
             }
-            $history = EmploymentHistory::create([
+            $history = EmploymentHistory::query()->create([
                 'employee_id' => $employee->id,
                 'start_date' => $employee->date_joined,
                 'action_id' => $action->id,
@@ -188,7 +198,7 @@ class EmployeesController extends Controller
             }
             Artisan::call('load:leave-balances', ['employee_id' => $employee->id]);
             DB::commit();
-            return response()->json('Record Saved!');
+            return response()->json('Employee created!');
         } catch (Exception $ex)
         {
             DB::rollBack();

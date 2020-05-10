@@ -30,6 +30,8 @@ class CreateAddressesTable extends Migration
             $table->string('floor')->nullable();
             $table->string('room')->nullable();
             $table->enum('type',['permanent','residence','work']);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
