@@ -19,7 +19,7 @@ class DesignationsController extends Controller
     {
         try
         {
-            $builder = Designation::with(['directorate','department', 'division', 'section', 'salaryScale']);
+            $builder = Designation::query();
             $scope = $request->get('scope');
             if ($scope == 'executive-secretary')
             {
@@ -28,29 +28,29 @@ class DesignationsController extends Controller
              else
             {
                 //$builder->forDirectorate();
-                if ($directorate_id = $request->get('directorate_id'))
+                if ($directorate_id = $request->get('directorateId'))
                 {
                     $builder->where('directorate_id', $directorate_id);
                 }
             }
-            if ($department_id = $request->get('department_id'))
+            if ($department_id = $request->get('departmentId'))
             {
                 $builder->where('department_id', $department_id);
             }
 
-            if ($division_id = $request->get('division_id'))
+            if ($division_id = $request->get('divisionId'))
             {
                 $builder->where('division_id', $division_id);
             }
 
-            if ($salary_scale_id = $request->get('salary_scale_id'))
-            {
-                $builder->where('salary_scale_id', $salary_scale_id);
-            }
-
-            if ($section_id = $request->get('section_id'))
+            if ($section_id = $request->get('sectionId'))
             {
                 $builder->where('section_id', $section_id);
+            }
+
+            if ($salary_scale_id = $request->get('salaryScaleId'))
+            {
+                $builder->where('salary_scale_id', $salary_scale_id);
             }
 
             $designations = $builder->get()->map(function (Designation $designation){
@@ -68,26 +68,31 @@ class DesignationsController extends Controller
     {
         try
         {
-
+            $rules = [
+                'title' => 'required',
+                'salaryScaleId' => 'required',
+                'maxHolders' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $data = [
                 'title' => $request->get('title'),
                 'description' => $request->get('description'),
                 'summary' => $request->get('summary'),
-                'salary_scale_id' => $request->get('salary_scale_id'),
-                'section_id' => $request->get('section_id'),
-                'max_holders' => $request->get('max_holders'),
+                'salary_scale_id' => $request->get('salaryScaleId'),
+                'section_id' => $request->get('sectionId'),
+                'max_holders' => $request->get('maxHolders'),
                 'probational' => $request->get('probational'),
-                'probation_period' => $request->get('probation_period'),
-                'supervisor_id' => $request->get('supervisor_id'),
+                'probation_period' => $request->get('probationPeriod'),
+                'supervisor_id' => $request->get('supervisorId'),
             ];
 
             $designation = new Designation($data);
 
             // section level
-            $section_id = $request->get('section_id');
-            if ($section_id && $section = Section::find($section_id))
+            $section_id = $request->get('sectionId');
+            if ($section_id && $section = Section::query()->find($section_id))
             {
-                $designation->company_id = $section->company_id;
                 $designation->section_id = $section_id;
 
                 if ($section->division_id)
@@ -105,13 +110,9 @@ class DesignationsController extends Controller
             }
 
             // division level
-            $division_id = $request->get('division_id');
-            if ($division_id && $division = Division::find($division_id))
+            $division_id = $request->get('divisionId');
+            if ($division_id && $division = Division::query()->find($division_id))
             {
-                if (!$designation->company_id)
-                {
-                    $designation->company_id = $division->company_id;
-                }
                 if (!$designation->division_id)
                 {
                     $designation->division_id = $division_id;
@@ -137,13 +138,9 @@ class DesignationsController extends Controller
                 }
             }
             // department level
-            $department_id = $request->get('department_id');
-            if ($department_id && $department = Department::find($department_id))
+            $department_id = $request->get('departmentId');
+            if ($department_id && $department = Department::query()->find($department_id))
             {
-                if (!$designation->company_id)
-                {
-                    $designation->company_id = $department->company_id;
-                }
                 if (!$designation->department_id)
                 {
                     $designation->department_id = $department_id;
@@ -161,25 +158,16 @@ class DesignationsController extends Controller
             }
 
             // directorate level
-            $directorate_id = $request->get('directorate_id');
-            if ($directorate_id && $directorate = Directorate::find($directorate_id))
+            $directorate_id = $request->get('directorateId');
+            if ($directorate_id && $directorate = Directorate::query()->find($directorate_id))
             {
-                if (!$designation->company_id)
-                {
-                    $designation->company_id = $directorate->company_id;
-                }
                 if (!$designation->directorate_id)
                 {
-                    $designation->directorate_id = $directorate->id;
-                } elseif ($designation->directorate_id != $directorate_id)
+                    $designation->directorate_id = $directorate_id;
+                } elseif ($designation->directorate_id != $directorate->id)
                 {
                     throw new Exception('The selected department, division, or section does not belong to the selected directorate');
                 }
-            }
-
-            if (!$designation->company_id)
-            {
-                $designation->company_id = $request->attributes->get('company_id');
             }
 
             DB::beginTransaction();
@@ -190,14 +178,14 @@ class DesignationsController extends Controller
 
             LeaveApplicationSetting::query()->create([
                 'designation_id' => $designation->id,
-                'verified_by' => $request->get('default_leave_application_verifier'),
+                'verified_by' => $request->get('defaultLeaveApplicationVerifier'),
                 'approved_by' => $designation->supervisor_id,
-                'granted_by' => $request->get('default_leave_application_granter'),
+                'granted_by' => $request->get('defaultLeaveApplicationGranter'),
             ]);
 
             DB::commit();
 
-            return response()->json('Record Saved!');
+            return response()->json('Designation Created!');
 
         } catch (Exception $ex)
         {
@@ -210,12 +198,16 @@ class DesignationsController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'salaryScaleId' => 'required',
+                'maxHolders' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $id = $request->get('id');
-            if (!$id)
-            {
-                throw new Exception('Designation required!');
-            }
-            $designation = Designation::find($id);
+            $designation = Designation::query()->find($id);
             if (!$designation)
             {
                 throw new Exception('Designation not found!');
@@ -224,37 +216,37 @@ class DesignationsController extends Controller
             $designation->title = $request->get('title');
             $designation->description = $request->get('description');
             $designation->summary = $request->get('summary');
-            $designation->max_holders = $request->get('max_holders');
+            $designation->max_holders = $request->get('maxHolders');
             $designation->probational = $request->get('probational');
-            $designation->probation_period = $request->get('probation_period');
-            $designation->supervisor_id = $request->get('supervisor_id');
+            $designation->probation_period = $request->get('probationPeriod');
+            $designation->supervisor_id = $request->get('supervisorId');
 
-            if($directorate_id = $request->get('directorate_id'))
+            if($directorate_id = $request->get('directorateId'))
             {
                 $designation->directorate_id = $directorate_id;
             }
 
-            if($department_id = $request->get('department_id'))
+            if($department_id = $request->get('departmentId'))
             {
                 $designation->department_id = $department_id;
             }
 
-            if($division_id = $request->get('division_id'))
+            if($division_id = $request->get('divisionId'))
             {
                 $designation->division_id = $division_id;
             }
 
-            if($section_id = $request->get('section_id'))
+            if($section_id = $request->get('sectionId'))
             {
                 $designation->section_id = $section_id;
             }
 
-            if($salary_scale_id = $request->get('salary_scale_id'))
+            if($salary_scale_id = $request->get('salaryScaleId'))
             {
                 $designation->salary_scale_id = $salary_scale_id;
             }
             $designation->save();
-            return response()->json('Changes Applied!');
+            return response()->json('Designation Updated!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);

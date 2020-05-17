@@ -79,7 +79,7 @@ class Designation extends Model
         return $this->holders()->get()->map(function ($holder) {
             $employee = new stdClass();
             $employee->id = $holder->id;
-            $employee->name = $holder->fullName();
+            $employee->fullName = $holder->fullName();
             $employee->username = $holder->username;
             $employee->avatar = $holder->avatar;
             $employee->designation = new stdClass();
@@ -89,7 +89,7 @@ class Designation extends Model
         });
     }
 
-    public function getDetails()
+    public function getDetails($minimal = false)
     {
         $designation = new stdClass();
         $designation->id = $this->id;
@@ -101,10 +101,14 @@ class Designation extends Model
         $designation->maxHolders = $this->max_holders;
         $designation->holders = $this->getHolders();
         $designation->active = !!$this->active;
-
         $designation->supervisorId = $this->supervisor_id;
+        $designation->salaryScaleId = $this->salary_scale_id ?: null;
+        if ($minimal)
+        {
+            return $designation;
+        }
         // avoid infinite loop
-        $designation->supervisor = ($this->supervisor && $this->supervisor_id != $this->id) ? $this->supervisor->getDetails() : null;
+        $designation->supervisor = ($this->supervisor && $this->supervisor_id != $this->id) ? $this->supervisor->getDetails(true) : null;
 
         $designation->subordinates = $this->subordinates()
                                           ->get()
@@ -112,7 +116,7 @@ class Designation extends Model
                                               return $subordinate->id != $this->id; // avoid infinite loop
                                           })
                                           ->map(function (Designation $subordinate) {
-                                              return $subordinate->getDetails();
+                                              return $subordinate->getDetails(true);
                                           });
 
         $designation->directorateId = $this->directorate_id ?: null;
@@ -127,7 +131,7 @@ class Designation extends Model
         $designation->sectionId = $this->section_id ?: null;
         $designation->section = $this->section ? $this->section->getDetails() : null;
 
-        $designation->salaryScaleId = $this->salary_scale_id ?: null;
+
         $designation->salaryScale = $this->salaryScale ? $this->salaryScale->getDetails() : null;
 
         $designation->createdBy = $this->created_by;
@@ -148,7 +152,7 @@ class Designation extends Model
                 $leaveApplicationsVerifier = Designation::query()->find($leaveApplicationSetting->verified_by);
                 if ($leaveApplicationsVerifier)
                 {
-                    $designation->leaveApplicationVerifier = $leaveApplicationsVerifier->getDetails();
+                    $designation->leaveApplicationVerifier = $leaveApplicationsVerifier->getDetails(true);
                 }
             }
             // avoid infinite loop
@@ -157,7 +161,7 @@ class Designation extends Model
                 $leaveApplicationApprover = Designation::query()->find($leaveApplicationSetting->approved_by);
                 if ($leaveApplicationApprover)
                 {
-                    $designation->leaveApplicationApprover = $leaveApplicationApprover->getDetails();
+                    $designation->leaveApplicationApprover = $leaveApplicationApprover->getDetails(true);
                 }
             }
             // avoid infinite loop
@@ -166,12 +170,11 @@ class Designation extends Model
                 $leaveApplicationGranter = Designation::query()->find($leaveApplicationSetting->granted_by);
                 if ($leaveApplicationGranter)
                 {
-                    $designation->leaveApplicationGranter = $leaveApplicationGranter->getDetails();
+                    $designation->leaveApplicationGranter = $leaveApplicationGranter->getDetails(true);
                 }
             }
         }
 
         return $designation;
     }
-
 }

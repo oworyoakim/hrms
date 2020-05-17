@@ -20,6 +20,7 @@ use App\Models\LeaveApplicationSetting;
 use App\Models\MaritalStatus;
 use App\Models\Relationship;
 use App\Models\Religion;
+use App\Models\SalaryScale;
 use App\Models\Section;
 use App\Models\Title;
 use Exception;
@@ -86,7 +87,7 @@ class HomeController extends Controller
                 'totalEmployees' => $totalEmployees,
                 'totalLeavesUpcoming' => Leave::pending()->count(),
                 'totalLeavesOngoing' => Leave::ongoing()->count(),
-                'totalLeaveApplications' => LeaveApplication::whereIn('status', ['pending', 'approved'])->count(),
+                'totalLeaveApplications' => LeaveApplication::query()->whereIn('status', ['pending', 'approved'])->count(),
             ];
             return response()->json($data);
         } catch (Exception $ex)
@@ -103,28 +104,28 @@ class HomeController extends Controller
             $divisionsBuilder = Division::query();
             $sectionsBuilder = Section::query();
             $designationsBuilder = Designation::query();
+
             $scope = $request->get('scope');
+            /*
             if ($scope == 'executive-secretary')
             {
                 $departmentsBuilder->forExecutiveSecretary();
                 $divisionsBuilder->forExecutiveSecretary();
                 $sectionsBuilder->forExecutiveSecretary();
-                $designationsBuilder->forExecutiveSecretary();
             } else
             {
                 $departmentsBuilder->forDirectorate();
                 $divisionsBuilder->forDirectorate();
                 $sectionsBuilder->forDirectorate();
-                $designationsBuilder->forDirectorate();
-                if ($directorate_id = $request->get('directorateId'))
+            }
+            */
+            if ($directorate_id = $request->get('directorateId'))
                 {
                     $departmentsBuilder->where('directorate_id', $directorate_id);
                     $divisionsBuilder->where('directorate_id', $directorate_id);
                     $sectionsBuilder->where('directorate_id', $directorate_id);
                     $designationsBuilder->where('directorate_id', $directorate_id);
                 }
-            }
-
             if ($department_id = $request->get('departmentId'))
             {
                 $divisionsBuilder->where('department_id', $department_id);
@@ -140,7 +141,8 @@ class HomeController extends Controller
             {
                 $designationsBuilder->where('section_id', $section_id);
             }
-            $designations = $designationsBuilder->get(['id', 'title', 'max_holders', 'directorate_id', 'department_id', 'division_id', 'section_id'])
+
+            $designations = $designationsBuilder->get()
                                                 ->map(function ($item) {
                                                     $designation = new stdClass();
                                                     $designation->id = $item->id;
@@ -153,6 +155,14 @@ class HomeController extends Controller
                                                     $designation->maxHolders = intval($item->max_holders);
                                                     return $designation;
                                                 });
+            $emp = Employee::query()->latest()->first();
+            if (!$emp)
+            {
+                $nextId = '0001';
+            } else
+            {
+                $nextId = str_pad($emp->id + 1, 4, '0', STR_PAD_LEFT);
+            }
             $data = [
                 'directorates' => ($scope == 'executive-secretary') ? [] : Directorate::all(['id', 'title']),
                 'departments' => $departmentsBuilder->get(['id', 'title', 'directorate_id as directorateId']),
@@ -176,6 +186,8 @@ class HomeController extends Controller
                     return $category;
                 }),
                 'documentTypes' => DocumentType::all(['id', 'title', 'category_id as categoryId']),
+                'salaryScales' => SalaryScale::all(['id', 'scale', 'rank']),
+                'nextEmployeeId' => $nextId,
             ];
             return response()->json($data);
         } catch (Exception $ex)

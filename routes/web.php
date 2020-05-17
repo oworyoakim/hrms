@@ -97,6 +97,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
         $router->get('', 'EmployeesController@index');
         $router->post('', 'EmployeesController@store');
         $router->put('', 'EmployeesController@update');
+        $router->get('next-id', 'EmployeesController@nextId');
 
         // employees/profile
         $router->group(['prefix' => 'profile'], function () use ($router) {

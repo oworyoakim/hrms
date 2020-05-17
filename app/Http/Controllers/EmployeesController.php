@@ -14,6 +14,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Exception;
+use Illuminate\Support\Str;
 
 class EmployeesController extends Controller
 {
@@ -37,13 +38,9 @@ class EmployeesController extends Controller
             if ($scope == 'executive-secretary')
             {
                 $builder->forExecutiveSecretary();
-            } else
+            } elseif ($directorate_id)
             {
-                $builder->forDirectorate();
-                if ($directorate_id)
-                {
-                    $builder->where('directorate_id', $directorate_id);
-                }
+                $builder->where('directorate_id', $directorate_id);
             }
 
             if ($name)
@@ -120,6 +117,8 @@ class EmployeesController extends Controller
                 'employeeNumber' => 'required|unique:employees,employee_number',
                 'designationId' => 'required',
                 'userId' => 'required|unique:employees,user_id',
+                'dob' => 'required|date_format:Y-m-d',
+                'joinDate' => 'required|date_format:Y-m-d',
                 'createdBy' => 'required',
             ];
             $this->validateData($request->all(), $rules);
@@ -171,7 +170,7 @@ class EmployeesController extends Controller
                 'employee_number' => $request->get('employeeNumber'),
                 'employment_term' => $request->get('employmentTerm'),
                 'employment_type' => $request->get('employmentType'),
-                'date_joined' => Carbon::parse($request->get('dateJoined')),
+                'date_joined' => Carbon::parse($request->get('joinDate')),
                 'created_by' => $request->get('createdBy'),
                 'avatar' => '/images/avatar.png',
             ];
@@ -209,5 +208,24 @@ class EmployeesController extends Controller
     public function update(Request $request)
     {
         return response()->json('Ok');
+    }
+
+    public function nextId()
+    {
+        try
+        {
+            $emp = Employee::query()->latest()->first();
+            if (!$emp)
+            {
+                $nextId = '0001';
+            } else
+            {
+                $nextId = str_pad($emp->id + 1, 4, '0', STR_PAD_LEFT);
+            }
+            return response()->json($nextId);
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
     }
 }
