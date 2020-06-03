@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
 
-class CreateEmploymentHistoryTable extends Migration
+class CreateResignationsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -14,15 +14,16 @@ class CreateEmploymentHistoryTable extends Migration
      */
     public function up()
     {
-        Schema::create('employment_history', function (Blueprint $table) {
+        Schema::create('resignations', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('action')->index();
             $table->unsignedBigInteger('employee_id');
-            $table->unsignedBigInteger('from_designation_id')->nullable();
-            $table->unsignedBigInteger('to_designation_id')->nullable();
             $table->timestamp('start_date');
-            $table->timestamp('end_date')->nullable();
+            $table->enum('status',['pending','approved','declined','granted'])->default('pending');
+            $table->timestamp('approved_at')->nullable();
+            $table->timestamp('approved_start_date')->nullable()->comment("This date must be set to a different value only on the consent of the employee. Otherwise leave the start date.");
+            $table->text('reason');
             $table->text('comments')->nullable();
+            $table->unsignedBigInteger('approved_by')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
             $table->timestamps();
@@ -37,6 +38,6 @@ class CreateEmploymentHistoryTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('employment_history');
+        Schema::dropIfExists('resignations');
     }
 }

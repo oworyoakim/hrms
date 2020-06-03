@@ -17,6 +17,7 @@ use App\Models\Gender;
 use App\Models\Leave;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationSetting;
+use App\Models\LeaveType;
 use App\Models\MaritalStatus;
 use App\Models\Relationship;
 use App\Models\Religion;
@@ -31,6 +32,25 @@ use stdClass;
 
 class HomeController extends Controller
 {
+    public function canLogin(Request $request)
+    {
+        $data = ['canLogin' => true];
+        try
+        {
+            $userId = $request->get('userId');
+            $employee = Employee::query()->where('user_id', $userId)->first();
+            if (!empty($employee))
+            {
+                $data['canLogin'] = $employee->canLogin();
+            }
+            return response()->json($data);
+        } catch (Exception $ex)
+        {
+            $data['error'] = $ex->getMessage();
+            return response()->json($data,Response::HTTP_FORBIDDEN);
+        }
+    }
+
     public function getDashboardStatistics()
     {
         try
@@ -120,12 +140,12 @@ class HomeController extends Controller
             }
             */
             if ($directorate_id = $request->get('directorateId'))
-                {
-                    $departmentsBuilder->where('directorate_id', $directorate_id);
-                    $divisionsBuilder->where('directorate_id', $directorate_id);
-                    $sectionsBuilder->where('directorate_id', $directorate_id);
-                    $designationsBuilder->where('directorate_id', $directorate_id);
-                }
+            {
+                $departmentsBuilder->where('directorate_id', $directorate_id);
+                $divisionsBuilder->where('directorate_id', $directorate_id);
+                $sectionsBuilder->where('directorate_id', $directorate_id);
+                $designationsBuilder->where('directorate_id', $directorate_id);
+            }
             if ($department_id = $request->get('departmentId'))
             {
                 $divisionsBuilder->where('department_id', $department_id);
@@ -186,6 +206,7 @@ class HomeController extends Controller
                     return $category;
                 }),
                 'documentTypes' => DocumentType::all(['id', 'title', 'category_id as categoryId']),
+                'leaveTypes' => LeaveType::active()->get(['id', 'title']),
                 'salaryScales' => SalaryScale::all(['id', 'scale', 'rank']),
                 'nextEmployeeId' => $nextId,
             ];

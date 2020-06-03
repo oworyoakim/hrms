@@ -57,7 +57,7 @@ class EmployeesController extends Controller
             }
             if ($status)
             {
-                $builder->where('status', $status);
+                $builder->where('employee_status', $status);
             }
             if ($employment_status)
             {
@@ -180,15 +180,11 @@ class EmployeesController extends Controller
             {
                 throw new Exception('Failed to create employee!');
             }
-            $action = EmploymentAction::query()->where('title', 'Appointment')->first();
-            if (!$action)
-            {
-                throw new Exception('Employee creation action rejected. Contact admin for help!');
-            }
+
             $history = EmploymentHistory::query()->create([
                 'employee_id' => $employee->id,
                 'start_date' => $employee->date_joined,
-                'action_id' => $action->id,
+                'action' => EmploymentHistory::ACTION_APPOINT,
                 'to_designation_id' => $employee->designation_id,
             ]);
             if (!$history)

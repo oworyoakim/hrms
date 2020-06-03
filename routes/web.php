@@ -24,6 +24,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
     $router->get('', 'HomeController@getDashboardStatistics');
     $router->get('dashboard-statistics', 'HomeController@getDashboardStatistics');
     $router->get('form-selections-options', 'HomeController@getFormSelectionsOptions');
+    $router->get('can-login', 'HomeController@canLogin');
 
     // Directorates
     $router->group(['prefix' => 'directorates'], function () use ($router) {

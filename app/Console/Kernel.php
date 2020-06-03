@@ -5,6 +5,7 @@ namespace App\Console;
 use App\Console\Commands\ExpireLeaveApplication;
 use App\Console\Commands\ExpireLeaveApplications;
 use App\Console\Commands\LoadLeaveBalances;
+use App\Console\Commands\ResignEmployees;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
 
@@ -19,6 +20,7 @@ class Kernel extends ConsoleKernel
         ExpireLeaveApplications::class,
         ExpireLeaveApplication::class,
         LoadLeaveBalances::class,
+        ResignEmployees::class,
     ];
 
     /**
@@ -30,5 +32,6 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule)
     {
         $schedule->command('leave_applications:expire')->daily();
+        $schedule->command('employees:resign')->daily();
     }
 }

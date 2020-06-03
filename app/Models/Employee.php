@@ -10,6 +10,7 @@ use App\Traits\Contactable;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use stdClass;
@@ -62,6 +63,17 @@ class Employee extends Model
 {
     use Addressable, Contactable, Commentable, BelongsToExecutiveSecretary, BelongsToDirectorate;
 
+    const STATUS_ONBOARDING = 'onboarding';
+    const STATUS_ACTIVE = 'active';
+    const STATUS_ONLEAVE = 'onleave';
+    const STATUS_SUSPENDED = 'suspended';
+    const STATUS_RESIGNED = 'resigned';
+    const STATUS_DEAD = 'dead';
+    const STATUS_RETIRED = 'retired';
+    const STATUS_DISMISSED = 'dismissed';
+    const STATUS_SECONDED = 'seconded';
+    const STATUS_RELEASED = 'released';
+
     protected $dates = [
         'dob',
         'date_joined',
@@ -72,6 +84,15 @@ class Employee extends Model
     public function fullName()
     {
         return "{$this->title} {$this->first_name} {$this->middle_name} {$this->last_name}";
+    }
+
+    /**
+     * Return true if the employee is allowed to log into the system
+     * @return bool
+     */
+    public function canLogin()
+    {
+        return in_array($this->employee_status, [Employee::STATUS_ACTIVE, Employee::STATUS_ONLEAVE]);
     }
 
     public function scale()
@@ -137,6 +158,37 @@ class Employee extends Model
     public function documents()
     {
         return $this->hasMany(Document::class, 'employee_id');
+    }
+
+    public function active(Builder $query)
+    {
+        return $query->where('employee_status', Employee::STATUS_ACTIVE);
+    }
+
+    public function suspended(Builder $query)
+    {
+        return $query->where('employee_status', Employee::STATUS_SUSPENDED);
+    }
+
+    public function onleave(Builder $query)
+    {
+        return $query->where('employee_status', Employee::STATUS_ONLEAVE);
+    }
+
+    public function onboard(Builder $query)
+    {
+        return $query->where('employee_status', Employee::STATUS_ONBOARDING);
+    }
+
+    public function exited(Builder $query)
+    {
+        return $query->whereIn('employee_status', [
+            Employee::STATUS_RESIGNED,
+            Employee::STATUS_DISMISSED,
+            Employee::STATUS_DEAD,
+            Employee::STATUS_RETIRED,
+            Employee::STATUS_SECONDED,
+        ]);
     }
 
     public function subordinates()
@@ -239,7 +291,7 @@ class Employee extends Model
     }
 
     /**
-     *
+     * Checks if an employee is allowed to apply for the given leave
      * @param LeaveType $leaveType
      * @param Carbon $startDate
      * @param int $duration
@@ -346,7 +398,7 @@ class Employee extends Model
         {
             throw new Exception("Sorry, you cannot apply for this leave because there is no active policy associated with this leave. Contact HR for help!");
         }
-
+        // check for remaining leave days for earned leave
         if ($activePolicy->earned_leave)
         {
             $spent = LeaveTracker::query()->where('employee_id', $this->id)
@@ -405,6 +457,21 @@ class Employee extends Model
 
     /**
      *
+     * @return \Carbon\Carbon|null
+     */
+    public function retirementDate()
+    {
+        if (!$this->dob)
+        {
+            return null;
+        }
+        $retirementAge = 60;
+
+        return $this->dob->clone()->addYears($retirementAge);
+    }
+
+    /**
+     *
      * @param int $leaveTypeId
      */
     public function loadLeaveBalances($leaveTypeId)
@@ -443,4 +510,60 @@ class Employee extends Model
             }
         }
     }
+
+    public function redesignate()
+    {
+
+    }
+
+    public function demote()
+    {
+
+    }
+
+    public function promote()
+    {
+
+    }
+
+    public function suspend()
+    {
+
+    }
+
+    public function retire()
+    {
+
+    }
+
+    public function dismiss()
+    {
+
+    }
+
+    /**
+     * Resigns an employee at midnight
+     * @param Carbon $date
+     * @param $comment
+     */
+    public function resign(Carbon $date, $comments)
+    {
+        if ($date->toDateString() == Carbon::today()->toDateString())
+        {
+            $this->histories()->create([
+                'action' => EmploymentHistory::ACTION_RESIGN,
+                'start_date' => $date,
+                'from_designation_id' => $this->designation_id,
+                'comments' => $comments,
+            ]);
+
+            $this->employment_status = Employee::STATUS_RESIGNED;
+
+            $this->exit_date = $date;
+
+            $this->save();
+        }
+    }
+
+
 }

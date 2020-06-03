@@ -4,4 +4,7 @@ Homestead.json
 Homestead.yaml
 .env
 .phpunit.result.cache
+#hrms-worker.conf
+#hrms-apache.conf
 docker-compose.yml
+Dockerfile

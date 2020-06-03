@@ -28,8 +28,8 @@ class LeaveApplicationsController extends Controller
         try
         {
             $builder = LeaveApplication::with(['employee']);
-            $employeeId = $request->get('employee_id');
-            $leaveTypeId = $request->get('leave_type_id');
+            $employeeId = $request->get('employeeId');
+            $leaveTypeId = $request->get('leaveTypeId');
             if ($employeeId)
             {
                 $builder->where('employee_id', $employeeId);
@@ -38,62 +38,10 @@ class LeaveApplicationsController extends Controller
             {
                 $builder->where('leave_type_id', $leaveTypeId);
             }
-            $leaveApplications = $builder->get()->transform(function (LeaveApplication $item) {
-                $application = new stdClass();
-                $application->id = $item->id;
-                $application->duration = $item->duration;
-                $application->startDate = $item->start_date->toDateString();
-                $application->status = $item->status;
-                $application->createdAt = $item->created_at->toDateTimeString();
-                $application->updatedAt = $item->updated_at->toDateTimeString();
-                $application->deletedAt = ($item->deleted_at) ? $item->deleted_at->toDateTimeString() : null;
-                //dd($application);
-                $application->employee = null;
-                if ($item->employee)
-                {
-                    $application->employee = new stdClass();
-                    $application->employee->id = $item->employee->id;
-                    $application->employee->name = $item->employee->fullName();
-                }
-                $application->leaveType = null;
-                if ($item->leaveType)
-                {
-                    $application->leaveType = new stdClass();
-                    $application->leaveType->id = $item->leaveType->id;
-                    $application->leaveType->title = $item->leaveType->title;
-                }
-
-                $application->nextActor = null;
-
-                if (in_array($item->status, ['pending', 'verified', 'approved']) && $application->employee && $designationId = $item->employee->designation_id)
-                {
-                    if ($applicationSetting = LeaveApplicationSetting::where('designation_id', $designationId)->first())
-                    {
-                        switch ($item->status)
-                        {
-                            case 'pending':
-                                if ($applicationSetting->verified_by && $designation = Designation::find($applicationSetting->verified_by))
-                                {
-                                    $application->nextActor = $designation->getHolders()->first();
-                                }
-                                break;
-                            case 'verified':
-                                if ($applicationSetting->approved_by && $designation = Designation::find($applicationSetting->approved_by))
-                                {
-                                    $application->nextActor = $designation->getHolders()->first();
-                                }
-                                break;
-                            case 'approved':
-                                if ($applicationSetting->granted_by && $designation = Designation::find($applicationSetting->granted_by))
-                                {
-                                    $application->nextActor = $designation->getHolders()->first();
-                                }
-                                break;
-                        }
-                    }
-                }
-                return $application;
-            });
+            $leaveApplications = $builder->get()
+                                         ->map(function (LeaveApplication $leaveApplication) {
+                                             return $leaveApplication->getDetails();
+                                         });
             return response()->json($leaveApplications);
         } catch (Exception $ex)
         {
@@ -105,21 +53,36 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $leaveTypeId = $request->get('leave_type_id');
+            $rules = [
+                'leaveTypeId' => 'required',
+                'employeeId' => 'required',
+                'startDate' => 'required|date_format:Y-m-d',
+                'duration' => 'required|numeric',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+            $leaveTypeId = $request->get('leaveTypeId');
             $leaveType = LeaveType::query()->find($leaveTypeId);
             if (!$leaveType)
             {
                 throw new Exception('Leave type not found!');
             }
 
-            $employeeId = $request->get('employee_id');
+            $employeeId = $request->get('employeeId');
             $employee = Employee::query()->find($employeeId);
             if (!$employee)
             {
                 throw new Exception('Employee not found!');
             }
+            $userId = $request->get('userId');
+            if ($employee->user_id != $userId)
+            {
+                throw new Exception('You cannot apply for leave for another employee!');
+            }
+
             $duration = $request->get('duration');
-            $startDate = Carbon::parse($request->get('start_date'));
+            $startDate = Carbon::parse($request->get('startDate'));
+            // TODO: consider holidays, weekends, salary scales to compute end date
             $endDate = $startDate->clone()->addDays($duration);
 
             $employee->checkIfCanApplyFor($leaveType, $startDate, $duration);
@@ -130,6 +93,7 @@ class LeaveApplicationsController extends Controller
                 'start_date' => $startDate,
                 'end_date' => $endDate,
                 'duration' => $duration,
+                'created_by' => $userId,
             ];
 
             $leaveApplication = LeaveApplication::query()->create($data);
@@ -141,7 +105,7 @@ class LeaveApplicationsController extends Controller
                     'body' => $comment
                 ]));
             }
-            return response()->json('Record Saved!');
+            return response()->json('Leave application created!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -152,11 +116,20 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $user_id = $request->get('user_id');
+            $rules = [
+                'id' => 'required',
+                'leaveTypeId' => 'required',
+                'employeeId' => 'required',
+                'startDate' => 'required|date_format:Y-m-d',
+                'duration' => 'required|numeric',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
+            $user_id = $request->get('userId');
             $id = $request->get('id');
-            $employee_id = $request->get('employee_id');
-            $leave_type_id = $request->get('leave_type_id');
-            $start_date = Carbon::parse($request->get('start_date'));
+            $employee_id = $request->get('employeeId');
+            $leave_type_id = $request->get('leaveTypeId');
+            $start_date = Carbon::parse($request->get('startDate'));
             $duration = $request->get('duration');
             $leaveApplication = LeaveApplication::query()->find($id);
             if (!$leaveApplication)
@@ -175,7 +148,7 @@ class LeaveApplicationsController extends Controller
                     'body' => $comment
                 ]));
             }
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application updated!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -186,7 +159,7 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::pending()->find($id);
             if (!$leaveApplication)
             {
@@ -203,11 +176,11 @@ class LeaveApplicationsController extends Controller
             if ($comment = $request->get('comment'))
             {
                 $leaveApplication->comments()->save(new Comment([
-                    'user_id' => $request->get('user_id'),
+                    'user_id' => $request->get('userId'),
                     'body' => $comment
                 ]));
             }
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application verified!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -218,7 +191,7 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::pending()->find($id);
             if (!$leaveApplication)
             {
@@ -235,11 +208,11 @@ class LeaveApplicationsController extends Controller
             if ($comment = $request->get('comment'))
             {
                 $leaveApplication->comments()->save(new Comment([
-                    'user_id' => $request->get('user_id'),
+                    'user_id' => $request->get('userId'),
                     'body' => $comment
                 ]));
             }
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application returned!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -250,7 +223,7 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::verified()->find($id);
             if (!$leaveApplication)
             {
@@ -267,11 +240,11 @@ class LeaveApplicationsController extends Controller
             if ($comment = $request->get('comment'))
             {
                 $leaveApplication->comments()->save(new Comment([
-                    'user_id' => $request->get('user_id'),
+                    'user_id' => $request->get('userId'),
                     'body' => $comment
                 ]));
             }
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application approved!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -282,7 +255,7 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::verified()->find($id);
             if (!$leaveApplication)
             {
@@ -299,11 +272,11 @@ class LeaveApplicationsController extends Controller
             if ($comment = $request->get('comment'))
             {
                 $leaveApplication->comments()->save(new Comment([
-                    'user_id' => $request->get('user_id'),
+                    'user_id' => $request->get('userId'),
                     'body' => $comment
                 ]));
             }
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application declined!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -314,9 +287,9 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $user_id = $request->get('user_id');
+            $user_id = $request->get('userId');
 
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::approved()->find($id);
             if (!$leaveApplication)
             {
@@ -386,7 +359,7 @@ class LeaveApplicationsController extends Controller
                 ]));
             }
             DB::commit();
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application granted!');
         } catch (Exception $ex)
         {
             DB::rollback();
@@ -398,7 +371,7 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::approved()->find($id);
             if (!$leaveApplication)
             {
@@ -415,11 +388,11 @@ class LeaveApplicationsController extends Controller
             if ($comment = $request->get('comment'))
             {
                 $leaveApplication->comments()->save(new Comment([
-                    'user_id' => $request->get('user_id'),
+                    'user_id' => $request->get('userId'),
                     'body' => $comment
                 ]));
             }
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application rejected!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
@@ -430,14 +403,14 @@ class LeaveApplicationsController extends Controller
     {
         try
         {
-            $id = $request->get('leave_application_id');
+            $id = $request->get('leaveApplicationId');
             $leaveApplication = LeaveApplication::pending()->find($id);
             if (!$leaveApplication)
             {
                 throw new Exception('Leave application not found!');
             }
             $leaveApplication->delete();
-            return response()->json('Changes Applied!');
+            return response()->json('Leave application deleted!');
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
