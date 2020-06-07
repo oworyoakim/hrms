@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use stdClass;
 
 class LeaveType extends Model
 {
@@ -26,6 +27,16 @@ class LeaveType extends Model
     public function scopeInactive(Builder $query)
     {
         return $query->where('active', false);
+    }
+
+    public function getDetails(){
+        $leaveType = new stdClass();
+        $leaveType->id = $this->id;
+        $leaveType->title = $this->title;
+        $leaveType->description = $this->description;
+        $leaveType->active = !!$this->active;
+        $leaveType->numOngoing = $this->leaves()->ongoing()->count();
+        return $leaveType;
     }
 
 }

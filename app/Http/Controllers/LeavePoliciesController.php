@@ -19,40 +19,15 @@ class LeavePoliciesController extends Controller
     {
         try
         {
-            $leave_type_id = $request->get('leave_type_id');
+            $leave_type_id = $request->get('leaveTypeId');
             if (!$leave_type_id)
             {
                 throw new Exception('Leave type required!');
             }
             $policies = LeavePolicy::query()->where('leave_type_id', $leave_type_id)
                                    ->get()
-                                   ->transform(function (LeavePolicy $item) {
-                                       $policy = new stdClass();
-                                       $policy->id = $item->id;
-                                       $policy->title = $item->title;
-                                       $policy->description = $item->description;
-                                       $policy->gender = $item->gender;
-                                       $policy->leaveTypeId = $item->leave_type_id;
-                                       $policy->leaveType = $item->leaveType;
-                                       $policy->withWeekend = !!$item->with_weekend;
-                                       $policy->earnedLeave = !!$item->earned_leave;
-                                       $policy->carryForward = !!$item->carry_forward;
-                                       $policy->duration = $item->duration;
-                                       $policy->maxCarryForwardDuration = $item->max_carry_forward_duration;
-                                       $policy->active = !!$item->active;
-                                       $policy->salaryScaleIds = $item->scales()->pluck('salary_scale_id')->all();
-                                       $policy->salaryScales = $item->scales()
-                                                                    ->get()
-                                                                    ->transform(function ($policyScale) {
-                                                                        $salaryScale = new stdClass();
-                                                                        $salaryScale->id = $policyScale->salary_scale_id;
-                                                                        $salaryScale->scale = $policyScale->scale->scale;
-                                                                        $salaryScale->rank = $policyScale->scale->rank;
-                                                                        $salaryScale->description = $policyScale->scale->description;
-                                                                        $salaryScale->active = !!$policyScale->active;
-                                                                        return $salaryScale;
-                                                                    });
-                                       return $policy;
+                                   ->map(function (LeavePolicy $policy) {
+                                       return $policy->getDetails();
                                    });
             return response()->json($policies);
         } catch (Exception $ex)
@@ -110,6 +85,7 @@ class LeavePoliciesController extends Controller
                 'with_weekend' => !!$request->get('withWeekend'),
                 'carry_forward' => !!$request->get('carryForward'),
                 'max_carry_forward_duration' => $request->get('maxCarryForwardDuration'),
+                'created_by' => $request->get('userId'),
             ];
 
             $messages = Collection::make();
@@ -190,7 +166,7 @@ class LeavePoliciesController extends Controller
     {
         try
         {
-            $leave_policy_id = $request->get('leave_policy_id');
+            $leave_policy_id = $request->get('leavePolicyId');
             if (!$leave_policy_id)
             {
                 throw new Exception('Leave policy required!');
@@ -213,7 +189,7 @@ class LeavePoliciesController extends Controller
     {
         try
         {
-            $leave_policy_id = $request->get('leave_policy_id');
+            $leave_policy_id = $request->get('leavePolicyId');
             if (!$leave_policy_id)
             {
                 throw new Exception('Leave policy required!');
@@ -253,7 +229,7 @@ class LeavePoliciesController extends Controller
     {
         try
         {
-            $leave_policy_id = $request->get('leave_policy_id');
+            $leave_policy_id = $request->get('leavePolicyId');
             if (!$leave_policy_id)
             {
                 throw new Exception('Leave policy required!');

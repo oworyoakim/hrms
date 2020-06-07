@@ -177,4 +177,9 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
             $router->patch('reject', 'LeaveApplicationsController@reject');
         });
     });
+
+    $router->group(["prefix" => "settings"], function () use ($router) {
+        $router->post('leave-applications-approvals', 'SettingsController@updateLeaveApplicationsSettings');
+
+    });
 });

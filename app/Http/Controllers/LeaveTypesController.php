@@ -15,11 +15,10 @@ class LeaveTypesController extends Controller
     {
         try
         {
-            $leaveTypes = LeaveType::all()->map(function (LeaveType $leaveType) {
-                $leaveType->numOngoing = $leaveType->leaves()->ongoing()->count();
-                $leaveType->active = !!$leaveType->active;
-                return $leaveType;
-            });
+            $leaveTypes = LeaveType::all()
+                                   ->map(function (LeaveType $leaveType) {
+                                       return $leaveType->getDetails();
+                                   });
             return response()->json($leaveTypes);
         } catch (Exception $ex)
         {
@@ -31,9 +30,15 @@ class LeaveTypesController extends Controller
     {
         try
         {
+            $rules = [
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+            $this->validateData($request->all(), $rules);
             $data = [
                 'title' => $request->get('title'),
                 'description' => $request->get('description'),
+                'created_by' => $request->get('userId'),
             ];
             $leaveType = LeaveType::query()->create($data);
             Artisan::call('load:leave-balances', ['leave_type_id' => $leaveType->id]);
@@ -48,6 +53,14 @@ class LeaveTypesController extends Controller
     {
         try
         {
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'userId' => 'required',
+            ];
+
+            $this->validateData($request->all(), $rules);
+
             $id = $request->get('id');
             $title = $request->get('title');
             $description = $request->get('description');
@@ -56,8 +69,10 @@ class LeaveTypesController extends Controller
             {
                 throw new Exception("Leave type not found!");
             }
+
             $leaveType->title = $title;
             $leaveType->description = $description;
+            $leaveType->updated_by = $request->get('userId');
             $leaveType->save();
             return response()->json('Changes Applied!');
         } catch (Exception $ex)
@@ -70,7 +85,7 @@ class LeaveTypesController extends Controller
     {
         try
         {
-            $leaveTypeId = $request->get('leave_type_id');
+            $leaveTypeId = $request->get('leaveTypeId');
             $leaveType = LeaveType::inactive()->find($leaveTypeId);
             if (!$leaveType)
             {
@@ -89,7 +104,7 @@ class LeaveTypesController extends Controller
     {
         try
         {
-            $leaveTypeId = $request->get('leave_type_id');
+            $leaveTypeId = $request->get('leaveTypeId');
             $leaveType = LeaveType::active()->find($leaveTypeId);
             if (!$leaveType)
             {
@@ -108,7 +123,7 @@ class LeaveTypesController extends Controller
     {
         try
         {
-            $leaveTypeId = $request->get('leave_type_id');
+            $leaveTypeId = $request->get('leaveTypeId');
             $leaveType = LeaveType::find($leaveTypeId);
             if (!$leaveType)
             {
