@@ -8,21 +8,24 @@ RUN apt-get update \
 RUN curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
     && php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer \
     && rm -f /tmp/composer-setup.*
+## Set working directory
+WORKDIR /var/www/html
+# Install dependencies
+COPY composer.json composer.lock ./
+RUN composer install --no-interaction --no-dev --no-scripts --no-autoloader && rm -rf /root/.composer
 ## Copy the app virtual host configuration
 COPY hrms-apache.conf /etc/apache2/sites-available
 ## Copy the Queue worker configurations
 COPY hrms-worker.conf /etc/supervisor/conf.d/hrms-worker.conf
-## Set working directory
-WORKDIR /var/www/html
 ## Create the .env file
 COPY .env.example .env
 ## Copy everything else to working directory
 COPY . .
+## Run the post-install scripts manually
+RUN composer dump-autoload
 ## Boot the APP
 RUN chown -R www-data:www-data /var/www/html/ \
-    && chmod 755 /var/www/html/ \
-    #&& chmod -R 775 storage \
-    && composer install --no-interaction --no-dev
+    && chmod 755 /var/www/html/
 ## Set up supervisor
 ## Start the supervisor queue worker
 RUN service supervisor start \

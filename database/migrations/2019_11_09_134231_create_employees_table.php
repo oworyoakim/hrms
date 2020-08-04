@@ -30,8 +30,8 @@ class CreateEmployeesTable extends Migration
             $table->unsignedBigInteger('department_id')->nullable();
             $table->unsignedBigInteger('directorate_id')->nullable();
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
-            $table->unsignedBigInteger('marital_status_id')->nullable();
-            $table->unsignedInteger('religion_id')->nullable();
+            $table->string('marital_status')->nullable();
+            $table->string('religion')->nullable();
             $table->date('dob')->nullable();
             $table->string('nin')->nullable();
             $table->string('passport')->nullable();

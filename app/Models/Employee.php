@@ -217,7 +217,7 @@ class Employee extends Model
         return $this->designation->supervisor->getHolders()->first();
     }
 
-    public function getDetails()
+    public function getDetails($expended = true)
     {
         $employee = new stdClass();
         $employee->id = $this->id;
@@ -240,53 +240,55 @@ class Employee extends Model
         $employee->permit = $this->permit;
         $employee->tin = $this->tin;
         $employee->nssf = $this->nssf;
-        $employee->approved = !!$this->approved;
-        $employee->nationality = $this->nationality;
-        $employee->approved = !!$this->approved;
-        $employee->employeeStatus = $this->employee_status;
-        $employee->employmentStatus = $this->employment_status;
-        $employee->employmentTerm = $this->employment_term;
-        $employee->employmentType = $this->employment_type;
-        $employee->maritalStatus = $this->marital_status;
-        $employee->religion = $this->religion;
-
-        $employee->supervisor = $this->supervisor();
-
-        $employee->subordinates = $this->subordinates();
-
-        $employee->directorateId = $this->directorate_id ?: null;
-        $employee->directorate = $this->directorate ? $this->directorate->getDetails() : null;
-
-        $employee->departmentId = $this->department_id ?: null;
-        $employee->department = $this->department ? $this->department->getDetails() : null;
-
-        $employee->divisionId = $this->division_id ?: null;
-        $employee->division = $this->division ? $this->division->getDetails() : null;
-
-        $employee->sectionId = $this->section_id ?: null;
-        $employee->section = $this->section ? $this->section->getDetails() : null;
-
-        $employee->designationId = $this->designation_id ?: null;
-        $employee->designation = null;
-
-        if ($this->designation)
+        if($expended)
         {
-            $employee->designation = new stdClass();
-            $employee->designation->id = $this->designation->id;
-            $employee->designation->title = $this->designation->title;
+            $employee->approved = !!$this->approved;
+            $employee->nationality = $this->nationality;
+            $employee->approved = !!$this->approved;
+            $employee->employeeStatus = $this->employee_status;
+            $employee->employmentStatus = $this->employment_status;
+            $employee->employmentTerm = $this->employment_term;
+            $employee->employmentType = $this->employment_type;
+            $employee->maritalStatus = $this->marital_status;
+            $employee->religion = $this->religion;
+
+            $employee->supervisor = $this->supervisor();
+
+            $employee->subordinates = $this->subordinates();
+
+            $employee->directorateId = $this->directorate_id ?: null;
+            $employee->directorate = $this->directorate ? $this->directorate->getDetails() : null;
+
+            $employee->departmentId = $this->department_id ?: null;
+            $employee->department = $this->department ? $this->department->getDetails() : null;
+
+            $employee->divisionId = $this->division_id ?: null;
+            $employee->division = $this->division ? $this->division->getDetails() : null;
+
+            $employee->sectionId = $this->section_id ?: null;
+            $employee->section = $this->section ? $this->section->getDetails() : null;
+
+            $employee->designationId = $this->designation_id ?: null;
+            $employee->designation = null;
+
+            if ($this->designation)
+            {
+                $employee->designation = new stdClass();
+                $employee->designation->id = $this->designation->id;
+                $employee->designation->title = $this->designation->title;
+            }
+
+            $employee->salaryScaleId = $this->salary_scale_id ?: null;
+            $employee->salaryScale = $this->scale ? $this->scale->getDetails() : null;
+            $nextWorkAnniversary = $this->nextWorkAnniversary();
+            $employee->nextWorkAnniversary = $nextWorkAnniversary ? $nextWorkAnniversary->toDateString() : null;
+            $employee->createdBy = $this->created_by;
+            $employee->updatedBy = $this->updated_by;
+            $employee->approvedBy = $this->approved_by;
+            $employee->createdAt = $this->created_at->toDateString();
+            $employee->updatedAt = $this->updated_at->toDateString();
+            $employee->approvedAt = $this->approved_at ? $this->approved_at->toDateString() : null;
         }
-
-        $employee->salaryScaleId = $this->salary_scale_id ?: null;
-        $employee->salaryScale = $this->scale ? $this->scale->getDetails() : null;
-        $nextWorkAnniversary = $this->nextWorkAnniversary();
-        $employee->nextWorkAnniversary = $nextWorkAnniversary ? $nextWorkAnniversary->toDateString() : null;
-        $employee->createdBy = $this->created_by;
-        $employee->updatedBy = $this->updated_by;
-        $employee->approvedBy = $this->approved_by;
-        $employee->createdAt = $this->created_at->toDateString();
-        $employee->updatedAt = $this->updated_at->toDateString();
-        $employee->approvedAt = $this->approved_at ? $this->approved_at->toDateString() : null;
-
         return $employee;
     }
 
@@ -427,17 +429,14 @@ class Employee extends Model
      */
     public function lastWorkAnniversary()
     {
-        if (!$this->date_joined)
+        $today = Carbon::today();
+        if (!$this->date_joined || $this->date_joined->greaterThan($today))
         {
             return null;
         }
-        $date = $this->date_joined;
-        $today = Carbon::today();
-        while ($date->lessThan($today) && $date->diffInMonths($today) > 12)
-        {
-            $date->addYears(1);
-        }
-        return $date;
+        $date = $this->date_joined->clone();
+        $years = $date->diffInYears($today);
+        return $date->addYears($years);
     }
 
     /**
@@ -452,7 +451,7 @@ class Employee extends Model
         {
             return null;
         }
-        return $lastWorkAnniversary->clone()->addMonths(12);
+        return $lastWorkAnniversary->addYears(1);
     }
 
     /**

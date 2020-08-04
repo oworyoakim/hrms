@@ -206,6 +206,23 @@ class EmployeesController extends Controller
         return response()->json('Ok');
     }
 
+    public function show(Request $request)
+    {
+        try
+        {
+            $id = $request->get('employeeId');
+            $employee = Employee::query()->find($id);
+            if (!$employee)
+            {
+                throw new Exception("Employee with id {$id} not found!");
+            }
+            return response()->json($employee->getDetails(false));
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
     public function nextId()
     {
         try
