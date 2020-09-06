@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\Section;
+use App\Scopes\IsDirectorate;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Exception;
@@ -32,6 +33,22 @@ class DepartmentsController extends Controller
             $departments = $builder->get()->map(function (Department $department) {
                 return $department->getDetails();
             });
+            return response()->json($departments);
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
+    public function indexUnscoped(Request $request)
+    {
+        try
+        {
+            $departments = Department::query()
+                                       ->get()
+                                       ->map(function (Department $department) {
+                                           return $department->getDetails();
+                                       });
             return response()->json($departments);
         } catch (Exception $ex)
         {

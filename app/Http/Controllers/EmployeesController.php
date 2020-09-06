@@ -105,6 +105,49 @@ class EmployeesController extends Controller
         }
     }
 
+    public function indexUnscoped(Request $request)
+    {
+        try
+        {
+            $builder = Employee::query();
+            $designation_id = $request->get('designationId');
+            $department_id = $request->get('departmentId');
+            $directorate_id = $request->get('directorateId');
+            $division_id = $request->get('divisionId');
+            $section_id = $request->get('sectionId');
+            if ($directorate_id)
+            {
+                $builder->where('directorate_id', $directorate_id);
+            }
+            if ($designation_id)
+            {
+                $builder->where('designation_id', $designation_id);
+            }
+            if ($department_id)
+            {
+                $builder->where('department_id', $department_id);
+            }
+            if ($division_id)
+            {
+                $builder->where('division_id', $division_id);
+            }
+            if ($section_id)
+            {
+                $builder->where('section_id', $section_id);
+            }
+
+            $employees = $builder->get()
+                                 ->map(function (Employee $employee) {
+                                     // transform the employee object here
+                                     return $employee->getDetails(false);
+                                 });
+            return response()->json($employees);
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
     public function store(Request $request)
     {
         try

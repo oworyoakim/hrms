@@ -44,6 +44,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
         $router->post('', 'DepartmentsController@store');
         $router->put('', 'DepartmentsController@update');
         $router->delete('', 'DepartmentsController@delete');
+        $router->get('unscoped', 'DepartmentsController@indexUnscoped');
     });
 
     // Divisions
@@ -102,6 +103,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
         $router->put('', 'EmployeesController@update');
         $router->get('show', 'EmployeesController@show');
         $router->get('next-id', 'EmployeesController@nextId');
+        $router->get('unscoped', 'EmployeesController@indexUnscoped');
 
         // employees/profile
         $router->group(['prefix' => 'profile'], function () use ($router) {
