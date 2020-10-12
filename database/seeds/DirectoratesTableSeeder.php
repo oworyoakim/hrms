@@ -17,7 +17,7 @@ class DirectoratesTableSeeder extends Seeder
 
         if ($directorate = Directorate::query()->create([
             'id' => 0,
-            'title' => 'Office of the Executive Secretary',
+            'title' => 'Office of the Executive Director',
             'description' => '',
         ]))
         {

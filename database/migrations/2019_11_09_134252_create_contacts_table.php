@@ -17,10 +17,8 @@ class CreateContactsTable extends Migration
             $table->bigIncrements('id');
             $table->unsignedBigInteger('contactable_id');
             $table->string('contactable_type');
-            $table->string('mobile')->nullable();
-            $table->string('email')->nullable();
-            $table->string('fax')->nullable();
-            $table->string('extension')->nullable();
+            $table->string('value');
+            $table->enum('kind',['phone','email','fax','extension']);
             $table->enum('type',['personal','home','work'])->default('personal');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();

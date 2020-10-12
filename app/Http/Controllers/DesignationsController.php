@@ -21,11 +21,10 @@ class DesignationsController extends Controller
         {
             $builder = Designation::query();
             $scope = $request->get('scope');
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $builder->forExecutiveSecretary();
-            }
-             else
+                $builder->forExecutiveDirector();
+            } else
             {
                 //$builder->forDirectorate();
                 if ($directorate_id = $request->get('directorateId'))
@@ -53,7 +52,7 @@ class DesignationsController extends Controller
                 $builder->where('salary_scale_id', $salary_scale_id);
             }
 
-            $designations = $builder->get()->map(function (Designation $designation){
+            $designations = $builder->get()->map(function (Designation $designation) {
                 return $designation->getDetails();
             });
 
@@ -70,13 +69,52 @@ class DesignationsController extends Controller
         {
             $rules = [
                 'title' => 'required',
+                'shortName' => 'required|unique:designations,short_name',
                 'salaryScaleId' => 'required',
                 'maxHolders' => 'required',
                 'userId' => 'required',
             ];
+            $heads = $request->get('heads');
+            $section_id = $request->get('sectionId');
+            $division_id = $request->get('divisionId');
+            $department_id = $request->get('departmentId');
+            $directorate_id = $request->get('directorateId');
+            $headsId = null;
+            if (!empty($heads))
+            {
+                if ($heads == 'executive-director-office')
+                {
+                    $headsId = 1;
+                } elseif ($heads == 'directorate')
+                {
+                    $rules['directorateId'] = 'required|numeric';
+                    $headsId = $directorate_id;
+                }
+                if ($heads == 'department')
+                {
+                    $rules['departmentId'] = 'required|numeric';
+                    $headsId = $department_id;
+                }
+                if ($heads == 'division')
+                {
+                    $rules['divisionId'] = 'required|numeric';
+                    $headsId = $division_id;
+                }
+                if ($heads == 'section')
+                {
+                    $rules['sectionId'] = 'required|numeric';
+                    $headsId = $section_id;
+                }
+                $designationIsHead = Designation::query()->where('heads', $heads)->where('heads_id', $headsId)->first();
+                if ($designationIsHead)
+                {
+                    throw new Exception("This {$heads} already has a head designation!");
+                }
+            }
             $this->validateData($request->all(), $rules);
             $data = [
                 'title' => $request->get('title'),
+                'short_name' => $request->get('shortName'),
                 'description' => $request->get('description'),
                 'summary' => $request->get('summary'),
                 'salary_scale_id' => $request->get('salaryScaleId'),
@@ -88,9 +126,10 @@ class DesignationsController extends Controller
             ];
 
             $designation = new Designation($data);
+            $designation->heads = $heads;
+            $designation->heads_id = $headsId;
 
             // section level
-            $section_id = $request->get('sectionId');
             if ($section_id && $section = Section::query()->find($section_id))
             {
                 $designation->section_id = $section_id;
@@ -110,7 +149,6 @@ class DesignationsController extends Controller
             }
 
             // division level
-            $division_id = $request->get('divisionId');
             if ($division_id && $division = Division::query()->find($division_id))
             {
                 if (!$designation->division_id)
@@ -138,7 +176,6 @@ class DesignationsController extends Controller
                 }
             }
             // department level
-            $department_id = $request->get('departmentId');
             if ($department_id && $department = Department::query()->find($department_id))
             {
                 if (!$designation->department_id)
@@ -158,7 +195,6 @@ class DesignationsController extends Controller
             }
 
             // directorate level
-            $directorate_id = $request->get('directorateId');
             if ($directorate_id && $directorate = Directorate::query()->find($directorate_id))
             {
                 if (!$designation->directorate_id)
@@ -198,14 +234,6 @@ class DesignationsController extends Controller
     {
         try
         {
-            $rules = [
-                'id' => 'required',
-                'title' => 'required',
-                'salaryScaleId' => 'required',
-                'maxHolders' => 'required',
-                'userId' => 'required',
-            ];
-            $this->validateData($request->all(), $rules);
             $id = $request->get('id');
             $designation = Designation::query()->find($id);
             if (!$designation)
@@ -213,35 +241,93 @@ class DesignationsController extends Controller
                 throw new Exception('Designation not found!');
             }
 
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'shortName' => 'required',
+                'salaryScaleId' => 'required',
+                'maxHolders' => 'required',
+                'userId' => 'required',
+            ];
+
+            $heads = $request->get('heads');
+            $section_id = $request->get('sectionId');
+            $division_id = $request->get('divisionId');
+            $department_id = $request->get('departmentId');
+            $directorate_id = $request->get('directorateId');
+            $headsId = null;
+            if (!empty($heads))
+            {
+                if ($heads == 'executive-director-office')
+                {
+                    $headsId = 1;
+                } elseif ($heads == 'directorate')
+                {
+                    $rules['directorateId'] = 'required|numeric';
+                    $headsId = $directorate_id;
+                }
+                if ($heads == 'department')
+                {
+                    $rules['departmentId'] = 'required|numeric';
+                    $headsId = $department_id;
+                }
+                if ($heads == 'division')
+                {
+                    $rules['divisionId'] = 'required|numeric';
+                    $headsId = $division_id;
+                }
+                if ($heads == 'section')
+                {
+                    $rules['sectionId'] = 'required|numeric';
+                    $headsId = $section_id;
+                }
+                $designationIsHead = Designation::query()->where('heads', $heads)->where('heads_id', $headsId)->first();
+                if ($designationIsHead && $designationIsHead->id != $designation->id)
+                {
+                    throw new Exception("This {$heads} already has a head designation!");
+                }
+            }
+
+            $this->validateData($request->all(), $rules);
+
+            $shortName = $request->get('shortName');
+            if ($designation->short_name != $shortName && $degis = Designation::query()->where('short_name', $shortName)->first())
+            {
+                throw new Exception("Short name {$shortName} already taken!");
+            }
+
             $designation->title = $request->get('title');
+            $designation->short_name = $request->get('shortName');
             $designation->description = $request->get('description');
             $designation->summary = $request->get('summary');
             $designation->max_holders = $request->get('maxHolders');
             $designation->probational = $request->get('probational');
             $designation->probation_period = $request->get('probationPeriod');
             $designation->supervisor_id = $request->get('supervisorId');
+            $designation->heads = $heads;
+            $designation->heads_id = $headsId;
 
-            if($directorate_id = $request->get('directorateId'))
+            if ($directorate_id)
             {
                 $designation->directorate_id = $directorate_id;
             }
 
-            if($department_id = $request->get('departmentId'))
+            if ($department_id)
             {
                 $designation->department_id = $department_id;
             }
 
-            if($division_id = $request->get('divisionId'))
+            if ($division_id)
             {
                 $designation->division_id = $division_id;
             }
 
-            if($section_id = $request->get('sectionId'))
+            if ($section_id)
             {
                 $designation->section_id = $section_id;
             }
 
-            if($salary_scale_id = $request->get('salaryScaleId'))
+            if ($salary_scale_id = $request->get('salaryScaleId'))
             {
                 $designation->salary_scale_id = $salary_scale_id;
             }

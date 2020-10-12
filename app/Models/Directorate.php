@@ -5,11 +5,12 @@ namespace App\Models;
 use App\Scopes\IsDirectorate;
 use App\Traits\Addressable;
 use App\Traits\Contactable;
+use App\Traits\HasAHead;
 use stdClass;
 
 class Directorate extends Model
 {
-    use Addressable, Contactable;
+    use Addressable, Contactable, HasAHead;
 
     /**
      * The "booting" method of the model.
@@ -53,6 +54,7 @@ class Directorate extends Model
         $directorate->updatedBy = $this->updated_by;
         $directorate->createdAt = $this->created_at->toDateString();
         $directorate->updatedAt = $this->updated_at->toDateString();
+        $directorate->head = $this->getHeadOf('directorate');
         return $directorate;
     }
 

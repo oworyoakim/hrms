@@ -154,6 +154,39 @@ class EmployeeProfileController extends Controller
         }
     }
 
+    public function updatePhoto(Request $request)
+    {
+        try
+        {
+            $username = $request->get('username');
+            if (!$username)
+            {
+                throw new Exception("Username is missing!");
+            }
+            $avatar = $request->get('avatar');
+            if (empty($avatar))
+            {
+                throw new Exception("Profile photo is missing!");
+            }
+            $id = $request->get('id');
+            $employee = Employee::query()->find($id);
+            if (!$employee)
+            {
+                throw new Exception('Employee not found!');
+            }
+
+            $employee->avatar = $avatar;
+            DB::beginTransaction();
+            $employee->save();
+            DB::commit();
+            return response()->json('Profile updated!');
+        } catch (Exception $ex)
+        {
+            DB::rollBack();
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
     public function download(Request $request)
     {
         try

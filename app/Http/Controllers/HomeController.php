@@ -58,19 +58,19 @@ class HomeController extends Controller
             $totalEmployees = 0;
             $statistics = Collection::make();
 
-            // Executive Secretary's Office
+            // Executive Director's Office
             $stat = new stdClass();
-            $stat->directorate = 'Executive Secretary';
+            $stat->directorate = 'Executive Director';
             // male
-            $builder = Employee::forExecutiveSecretary();
+            $builder = Employee::forExecutiveDirector();
             $builder->where('gender', 'male');
             $stat->male = $builder->count();
             // female
-            $builder = Employee::forExecutiveSecretary();
+            $builder = Employee::forExecutiveDirector();
             $builder->where('gender', 'female');
             $stat->female = $builder->count();
             // other
-            $builder = Employee::forExecutiveSecretary();
+            $builder = Employee::forExecutiveDirector();
             $builder->where('gender', 'other');
             $stat->other = $builder->count();
 
@@ -127,11 +127,11 @@ class HomeController extends Controller
 
             $scope = $request->get('scope');
             /*
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $departmentsBuilder->forExecutiveSecretary();
-                $divisionsBuilder->forExecutiveSecretary();
-                $sectionsBuilder->forExecutiveSecretary();
+                $departmentsBuilder->forExecutiveDirector();
+                $divisionsBuilder->forExecutiveDirector();
+                $sectionsBuilder->forExecutiveDirector();
             } else
             {
                 $departmentsBuilder->forDirectorate();
@@ -184,7 +184,7 @@ class HomeController extends Controller
                 $nextId = str_pad($emp->id + 1, 4, '0', STR_PAD_LEFT);
             }
             $data = [
-                'directorates' => ($scope == 'executive-secretary') ? [] : Directorate::all(['id', 'title']),
+                'directorates' => ($scope == 'executive-director') ? [] : Directorate::all(['id', 'title']),
                 'departments' => $departmentsBuilder->get(['id', 'title', 'directorate_id as directorateId']),
                 'divisions' => $divisionsBuilder->get(['id', 'title', 'directorate_id as directorateId', 'department_id as departmentId']),
                 'sections' => $sectionsBuilder->get(['id', 'title', 'directorate_id as directorateId', 'department_id as departmentId', 'division_id as divisionId']),

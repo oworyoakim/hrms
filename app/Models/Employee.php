@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Traits\Addressable;
 use App\Traits\BelongsToDirectorate;
-use App\Traits\BelongsToExecutiveSecretary;
+use App\Traits\BelongsToExecutiveDirector;
 use App\Traits\Commentable;
 use App\Traits\Contactable;
 use Carbon\CarbonInterface;
@@ -27,6 +27,7 @@ use stdClass;
  * @property string first_name
  * @property string last_name
  * @property string middle_name
+ * @property string other_names
  * @property string gender
  * @property string email
  * @property string nin
@@ -50,6 +51,7 @@ use stdClass;
  * @property int directorate_id
  * @property string $marital_status
  * @property string religion
+ * @property string avatar
  * @property Carbon dob
  * @property Carbon approved_at
  * @property Carbon date_joined
@@ -61,7 +63,7 @@ use stdClass;
  */
 class Employee extends Model
 {
-    use Addressable, Contactable, Commentable, BelongsToExecutiveSecretary, BelongsToDirectorate;
+    use Addressable, Contactable, Commentable, BelongsToExecutiveDirector, BelongsToDirectorate;
 
     const STATUS_ONBOARDING = 'onboarding';
     const STATUS_ACTIVE = 'active';
@@ -83,7 +85,16 @@ class Employee extends Model
 
     public function fullName()
     {
-        return "{$this->title} {$this->first_name} {$this->middle_name} {$this->last_name}";
+        $fullName = "{$this->title} {$this->first_name} {$this->last_name}";
+        if (!empty($this->other_names))
+        {
+            $fullName .= " {$this->other_names}";
+        }
+        if (!empty($this->middle_name))
+        {
+            $fullName .= " {$this->middle_name}";
+        }
+        return $fullName;
     }
 
     /**
@@ -226,6 +237,7 @@ class Employee extends Model
         $employee->firstName = $this->first_name;
         $employee->lastName = $this->last_name;
         $employee->middleName = $this->middle_name;
+        $employee->otherNames = $this->other_names;
         $employee->fullName = $this->fullName();
         $employee->employeeNumber = $this->employee_number;
         $employee->email = $this->email;
@@ -240,36 +252,54 @@ class Employee extends Model
         $employee->permit = $this->permit;
         $employee->tin = $this->tin;
         $employee->nssf = $this->nssf;
-        if($expended)
-        {
-            $employee->approved = !!$this->approved;
-            $employee->nationality = $this->nationality;
-            $employee->approved = !!$this->approved;
-            $employee->employeeStatus = $this->employee_status;
-            $employee->employmentStatus = $this->employment_status;
-            $employee->employmentTerm = $this->employment_term;
-            $employee->employmentType = $this->employment_type;
-            $employee->maritalStatus = $this->marital_status;
-            $employee->religion = $this->religion;
+        $employee->approved = !!$this->approved;
+        $employee->nationality = $this->nationality;
+        $employee->approved = !!$this->approved;
+        $employee->employeeStatus = $this->employee_status;
+        $employee->employmentStatus = $this->employment_status;
+        $employee->employmentTerm = $this->employment_term;
+        $employee->employmentType = $this->employment_type;
+        $employee->maritalStatus = $this->marital_status;
+        $employee->religion = $this->religion;
+        $employee->directorateId = $this->directorate_id ?: null;
+        $employee->departmentId = $this->department_id ?: null;
+        $employee->divisionId = $this->division_id ?: null;
+        $employee->sectionId = $this->section_id ?: null;
+        $employee->designationId = $this->designation_id ?: null;
+        $employee->salaryScaleId = $this->salary_scale_id ?: null;
+        $employee->contacts = $this->contacts()->get()->map(function (Contact $contact) {
+            return $contact->getDetails();
+        });
+        $employee->createdBy = $this->created_by;
+        $employee->updatedBy = $this->updated_by;
+        $employee->approvedBy = $this->approved_by;
+        $employee->createdAt = $this->created_at->toDateString();
+        $employee->updatedAt = $this->updated_at->toDateString();
+        $employee->approvedAt = $this->approved_at ? $this->approved_at->toDateString() : null;
+        $employee->designation = null;
+        $employee->salaryScale = null;
+        $employee->nextWorkAnniversary = null;
+        $employee->nextOfKin = null;
+        $employee->supervisor = null;
+        $employee->subordinates = [];
+        $employee->directorate = null;
+        $employee->department = null;
+        $employee->division = null;
+        $employee->section = null;
 
+        if ($expended)
+        {
             $employee->supervisor = $this->supervisor();
 
             $employee->subordinates = $this->subordinates();
 
-            $employee->directorateId = $this->directorate_id ?: null;
             $employee->directorate = $this->directorate ? $this->directorate->getDetails() : null;
 
-            $employee->departmentId = $this->department_id ?: null;
             $employee->department = $this->department ? $this->department->getDetails() : null;
 
-            $employee->divisionId = $this->division_id ?: null;
             $employee->division = $this->division ? $this->division->getDetails() : null;
 
-            $employee->sectionId = $this->section_id ?: null;
             $employee->section = $this->section ? $this->section->getDetails() : null;
-
-            $employee->designationId = $this->designation_id ?: null;
-            $employee->designation = null;
 
             if ($this->designation)
             {
@@ -278,25 +308,22 @@ class Employee extends Model
                 $employee->designation->title = $this->designation->title;
             }
 
-            $employee->salaryScaleId = $this->salary_scale_id ?: null;
             $employee->salaryScale = $this->scale ? $this->scale->getDetails() : null;
             $nextWorkAnniversary = $this->nextWorkAnniversary();
             $employee->nextWorkAnniversary = $nextWorkAnniversary ? $nextWorkAnniversary->toDateString() : null;
-            $employee->createdBy = $this->created_by;
-            $employee->updatedBy = $this->updated_by;
-            $employee->approvedBy = $this->approved_by;
-            $employee->createdAt = $this->created_at->toDateString();
-            $employee->updatedAt = $this->updated_at->toDateString();
-            $employee->approvedAt = $this->approved_at ? $this->approved_at->toDateString() : null;
+            $nextOfKin = $this->relatedPersons()->where('is_next_of_kin', true)->first();
+            $employee->nextOfKin = !empty($nextOfKin) ? $nextOfKin->getDetails() : null;
         }
         return $employee;
     }
 
     /**
      * Checks if an employee is allowed to apply for the given leave
+     *
      * @param LeaveType $leaveType
      * @param Carbon $startDate
      * @param int $duration
+     *
      * @return bool
      * @throws Exception
      */
@@ -542,6 +569,7 @@ class Employee extends Model
 
     /**
      * Resigns an employee at midnight
+     *
      * @param Carbon $date
      * @param $comment
      */

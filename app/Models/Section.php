@@ -3,12 +3,13 @@
 namespace App\Models;
 
 use App\Traits\BelongsToDirectorate;
-use App\Traits\BelongsToExecutiveSecretary;
+use App\Traits\BelongsToExecutiveDirector;
+use App\Traits\HasAHead;
 use stdClass;
 
 class Section extends Model
 {
-    use BelongsToExecutiveSecretary,BelongsToDirectorate;
+    use BelongsToExecutiveDirector,BelongsToDirectorate, HasAHead;
 
     public function directorate()
     {
@@ -40,6 +41,7 @@ class Section extends Model
         $section->updatedBy = $this->updated_by;
         $section->createdAt = $this->created_at->toDateString();
         $section->updatedAt = $this->updated_at->toDateString();
+        $section->head = $this->getHeadOf('section');
         return $section;
     }
 

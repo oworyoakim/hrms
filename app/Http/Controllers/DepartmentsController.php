@@ -18,9 +18,9 @@ class DepartmentsController extends Controller
         {
             $builder = Department::query();
             $scope = $request->get('scope');
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $builder->forExecutiveSecretary();
+                $builder->forExecutiveDirector();
             } else
             {
                 $builder->forDirectorate();
@@ -123,9 +123,9 @@ class DepartmentsController extends Controller
             $id = $request->get('departmentId');
             $builder = Department::query();
             $scope = $request->get('scope');
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $builder->forExecutiveSecretary();
+                $builder->forExecutiveDirector();
             } else
             {
                 $builder->forDirectorate();

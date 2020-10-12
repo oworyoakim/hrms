@@ -19,9 +19,9 @@ class SectionsController extends Controller
         {
             $builder = Section::query();
             $scope = $request->get('scope');
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $builder->forExecutiveSecretary();
+                $builder->forExecutiveDirector();
             } else
             {
                 $builder->forDirectorate();
@@ -159,9 +159,9 @@ class SectionsController extends Controller
             $id = $request->get('sectionId');
             $builder = Section::query();
             $scope = $request->get('scope');
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $builder->forExecutiveSecretary();
+                $builder->forExecutiveDirector();
             } else
             {
                 $builder->forDirectorate();

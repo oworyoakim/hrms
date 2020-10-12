@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\HrmsHelper;
 use App\Models\Designation;
 use App\Models\Employee;
 use App\Models\EmploymentAction;
@@ -9,12 +10,14 @@ use App\Models\EmploymentHistory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Exception;
 use Illuminate\Support\Str;
+use stdClass;
 
 class EmployeesController extends Controller
 {
@@ -35,9 +38,9 @@ class EmployeesController extends Controller
             $section_id = $request->get('sectionId');
             $scope = $request->get('scope');
             $gender = $request->get('gender');
-            if ($scope == 'executive-secretary')
+            if ($scope == 'executive-director')
             {
-                $builder->forExecutiveSecretary();
+                $builder->forExecutiveDirector();
             } elseif ($directorate_id)
             {
                 $builder->where('directorate_id', $directorate_id);
@@ -93,11 +96,13 @@ class EmployeesController extends Controller
                 $builder->where('gender', $gender);
             }
 
-            $employees = $builder->get()
-                                 ->map(function (Employee $employee) {
-                                     // transform the employee object here
-                                     return $employee->getDetails();
-                                 });
+            $employeesData = $builder->paginate(8);
+            $employees = HrmsHelper::generatePagination($employeesData);
+            $employees->data = $employeesData->getCollection()
+                                             ->map(function (Employee $employee) {
+                                                 // transform the employee object here
+                                                 return $employee->getDetails();
+                                             });
             return response()->json($employees);
         } catch (Exception $ex)
         {
@@ -203,6 +208,7 @@ class EmployeesController extends Controller
                 'last_name' => $last_name,
                 'title' => $request->get('title'),
                 'middle_name' => $request->get('middleName'),
+                'other_names' => $request->get('otherNames'),
                 'gender' => $request->get('gender'),
                 'religion' => $request->get('religion'),
                 'dob' => Carbon::parse($request->get('dob')),
@@ -215,7 +221,7 @@ class EmployeesController extends Controller
                 'employment_type' => $request->get('employmentType'),
                 'date_joined' => Carbon::parse($request->get('joinDate')),
                 'created_by' => $request->get('createdBy'),
-                'avatar' => '/images/avatar.png',
+                'avatar' => '/storage/images/avatar.png',
             ];
 
             $employee = Employee::query()->create($data);
@@ -246,7 +252,72 @@ class EmployeesController extends Controller
 
     public function update(Request $request)
     {
-        return response()->json('Ok');
+        try
+        {
+            $id = $request->get('id');
+            $employee = Employee::query()->find($id);
+            if (!$employee)
+            {
+                throw new Exception("Employee not found!");
+            }
+            $rules = [
+                'id' => 'required',
+                'title' => 'required',
+                'firstName' => 'required',
+                'lastName' => 'required',
+                'designationId' => 'required',
+                'dob' => 'required|date_format:Y-m-d',
+                'joinDate' => 'required|date_format:Y-m-d',
+                'updatedBy' => 'required',
+            ];
+            $employeeNumber = $request->get('employeeNumber');
+            $email = $request->get('email');
+            $designationId = $request->get('designationId');
+
+            if ($employeeNumber != $employee->employee_number)
+            {
+                $rules['employeeNumber'] = 'required|unique:employees,employee_number';
+            }
+            if ($email != $employee->email)
+            {
+                $rules['email'] = 'required|unique:employees,email';
+            }
+            $this->validateData($request->all(), $rules);
+            $designation = Designation::query()->find($designationId);
+            if (!$designation)
+            {
+                throw new Exception('Designation not found!');
+            }
+            $employee->designation_id = $designation->id;
+            $employee->directorate_id = $designation->directorate_id;
+            $employee->department_id = $designation->department_id;
+            $employee->division_id = $designation->division_id;
+            $employee->section_id = $designation->section_id;
+            $employee->salary_scale_id = $designation->salary_scale_id;
+            $employee->title = $request->get('title');
+            $employee->first_name = $request->get('firstName');
+            $employee->last_name = $request->get('lastName');
+            $employee->other_names = $request->get('otherNames');
+            $employee->email = $email;
+            $employee->employee_number = $employeeNumber;
+            $employee->nssf = $request->get('nssf');
+            $employee->tin = $request->get('tin');
+            $employee->nin = $request->get('nin');
+            $employee->passport = $request->get('passport');
+            $employee->gender = $request->get('gender');
+            $employee->religion = $request->get('religion');
+            $employee->marital_status = $request->get('maritalStatus');
+            $employee->dob = Carbon::parse($request->get('dob'));
+            $employee->date_joined = Carbon::parse($request->get('joinDate'));
+            $employee->employment_type = $request->get('employmentType');
+            $employee->employment_term = $request->get('employmentTerm');
+            $employee->save();
+            return response()->json('Employee updated!');
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+
     }
 
     public function show(Request $request)
@@ -259,7 +330,8 @@ class EmployeesController extends Controller
             {
                 throw new Exception("Employee with id {$id} not found!");
             }
-            return response()->json($employee->getDetails(false));
+            $data = $employee->getDetails(false);
+            return response()->json($data);
         } catch (Exception $ex)
         {
             return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);

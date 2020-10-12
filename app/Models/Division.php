@@ -4,13 +4,14 @@ namespace App\Models;
 
 use App\Traits\Addressable;
 use App\Traits\BelongsToDirectorate;
-use App\Traits\BelongsToExecutiveSecretary;
+use App\Traits\BelongsToExecutiveDirector;
 use App\Traits\Contactable;
+use App\Traits\HasAHead;
 use stdClass;
 
 class Division extends Model
 {
-    use Addressable, Contactable,BelongsToDirectorate,BelongsToExecutiveSecretary;
+    use Addressable, Contactable,BelongsToDirectorate,BelongsToExecutiveDirector, HasAHead;
 
     public function directorate()
     {
@@ -45,6 +46,7 @@ class Division extends Model
         $division->updatedBy = $this->updated_by;
         $division->createdAt = $this->created_at->toDateString();
         $division->updatedAt = $this->updated_at->toDateString();
+        $division->head = $this->getHeadOf('division');
         return $division;
     }
 

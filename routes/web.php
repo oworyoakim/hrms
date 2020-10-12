@@ -47,6 +47,13 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
         $router->get('unscoped', 'DepartmentsController@indexUnscoped');
     });
 
+    // Contacts
+    $router->group(['prefix' => 'contacts'], function () use ($router) {
+        $router->post('', 'ContactsController@store');
+        $router->put('', 'ContactsController@update');
+        $router->delete('', 'ContactsController@delete');
+    });
+
     // Divisions
     $router->group(['prefix' => 'divisions'], function () use ($router) {
         $router->get('', 'DivisionsController@index');
@@ -109,6 +116,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
         $router->group(['prefix' => 'profile'], function () use ($router) {
             $router->get('', 'EmployeeProfileController@index');
             $router->patch('', 'EmployeeProfileController@update');
+            $router->patch('photo', 'EmployeeProfileController@updatePhoto');
             $router->get('download', 'EmployeeProfileController@download');
         });
 

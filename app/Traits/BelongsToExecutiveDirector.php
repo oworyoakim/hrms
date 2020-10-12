@@ -6,9 +6,9 @@ namespace App\Traits;
 
 use Illuminate\Database\Eloquent\Builder;
 
-trait BelongsToExecutiveSecretary
+trait BelongsToExecutiveDirector
 {
-    public function scopeForExecutiveSecretary(Builder $builder){
+    public function scopeForExecutiveDirector(Builder $builder){
         return $builder->whereNull('directorate_id');
     }
 }
