@@ -161,27 +161,25 @@ class EmployeesController extends Controller
                 'title' => 'required',
                 'firstName' => 'required',
                 'lastName' => 'required',
-                'username' => 'required|unique:employees',
                 'employeeNumber' => 'required|unique:employees,employee_number',
-                'designationId' => 'required',
+                'email' => 'required|unique:employees,email',
                 'userId' => 'required|unique:employees,user_id',
                 'dob' => 'required|date_format:Y-m-d',
                 'joinDate' => 'required|date_format:Y-m-d',
                 'createdBy' => 'required',
+                'designationId' => 'required',
             ];
-            $this->validateData($request->all(), $rules);
-            $username = $request->get('username');
-            $first_name = $request->get('firstName');
-            $last_name = $request->get('lastName');
 
-            $designation_id = $request->get('designationId');
+            $data = $request->all();
+            $data['email'] = strtolower($data['email']);
+            $this->validateData($data, $rules);
 
-            if (!$designation_id)
+            if (empty($data['designationId']))
             {
                 throw new Exception('Designation required!');
             }
 
-            $designation = Designation::query()->find($designation_id);
+            $designation = Designation::query()->find($data['designationId']);
 
             if (!$designation)
             {
@@ -196,31 +194,32 @@ class EmployeesController extends Controller
             DB::beginTransaction();
 
             $data = [
-                'user_id' => $request->get('userId'),
+                'user_id' => $data['userId'],
                 'directorate_id' => $designation->directorate_id,
                 'department_id' => $designation->department_id,
                 'division_id' => $designation->division_id,
                 'section_id' => $designation->section_id,
                 'designation_id' => $designation->id,
                 'salary_scale_id' => $designation->salary_scale_id,
-                'username' => $username,
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'title' => $request->get('title'),
-                'middle_name' => $request->get('middleName'),
-                'other_names' => $request->get('otherNames'),
-                'gender' => $request->get('gender'),
-                'religion' => $request->get('religion'),
-                'dob' => Carbon::parse($request->get('dob')),
-                'nin' => $request->get('nin'),
-                'nssf' => $request->get('nssf'),
-                'tin' => $request->get('tin'),
-                'employee_status' => $request->get('employeeStatus') ?: 'active',
-                'employee_number' => $request->get('employeeNumber'),
-                'employment_term' => $request->get('employmentTerm'),
-                'employment_type' => $request->get('employmentType'),
-                'date_joined' => Carbon::parse($request->get('joinDate')),
-                'created_by' => $request->get('createdBy'),
+                'username' => $data['email'],
+                'email' => $data['email'],
+                'first_name' => $data['firstName'],
+                'last_name' => $data['lastName'],
+                'title' => $data['title'],
+                'middle_name' => $data['middleName'],
+                'other_names' => $data['otherNames'],
+                'gender' => $data['gender'],
+                'religion' => $data['religion'],
+                'dob' => Carbon::parse($data['dob']),
+                'nin' => $data['nin'],
+                'nssf' => $data['nssf'],
+                'tin' => $data['tin'],
+                'employee_status' => empty($data['employeeStatus']) ? 'active' : $data['employeeStatus'],
+                'employee_number' => $data['employeeNumber'],
+                'employment_term' => $data['employmentTerm'],
+                'employment_type' => $data['employmentType'],
+                'date_joined' => Carbon::parse($data['joinDate']),
+                'created_by' => $data['createdBy'],
                 'avatar' => '/storage/images/avatar.png',
             ];
 
@@ -278,7 +277,7 @@ class EmployeesController extends Controller
             {
                 $rules['employeeNumber'] = 'required|unique:employees,employee_number';
             }
-            if ($email != $employee->email)
+            if (strtolower($email) !== strtolower($employee->email))
             {
                 $rules['email'] = 'required|unique:employees,email';
             }
@@ -298,7 +297,8 @@ class EmployeesController extends Controller
             $employee->first_name = $request->get('firstName');
             $employee->last_name = $request->get('lastName');
             $employee->other_names = $request->get('otherNames');
-            $employee->email = $email;
+            $employee->username = strtolower($email);
+            $employee->email = strtolower($email);
             $employee->employee_number = $employeeNumber;
             $employee->nssf = $request->get('nssf');
             $employee->tin = $request->get('tin');
