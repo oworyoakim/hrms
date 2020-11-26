@@ -4,7 +4,9 @@ namespace App\Models;
 
 use App\Traits\Commentable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use stdClass;
+
 
 class LeaveApplication extends Model
 {
@@ -76,6 +78,7 @@ class LeaveApplication extends Model
             $application->employee = new stdClass();
             $application->employee->id = $this->employee->id;
             $application->employee->name = $this->employee->fullName();
+            $application->employee->designationId = $this->employee->designation_id;
         }
         $application->leaveType = null;
         if ($this->leaveType)
@@ -116,6 +119,23 @@ class LeaveApplication extends Model
                 }
             }
         }
+
+        /*
+         * A leave application can be verified if:
+         * 1. Its pending
+         * 2. It's start date is in the future
+         * 3. The current logged in employee's designation is the set verifier for the applicant's designation
+         * 4. The logged in employee has permissions to verify leave applications
+         */
+        $application->canBeVerified = $this->status == 'pending' && $this->start_date->greaterThan(Carbon::today());
+        $application->canBeReturned = $this->status == 'pending' && $this->start_date->greaterThan(Carbon::today());
+        $application->canBeApproved = $this->status == 'verified' && $this->start_date->greaterThan(Carbon::today());
+        $application->canBeDeclined = $this->status == 'verified' && $this->start_date->greaterThan(Carbon::today());
+        $application->canBeGranted = $this->status == 'approved' && $this->start_date->greaterThan(Carbon::today());
+        $application->canBeRejected = $this->status == 'approved' && $this->start_date->greaterThan(Carbon::today());
+        $application->canBeDeleted = false;
+        $application->canBeEdited = false;
+
         return $application;
     }
 

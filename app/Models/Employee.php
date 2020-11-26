@@ -286,6 +286,20 @@ class Employee extends Model
         $employee->department = null;
         $employee->division = null;
         $employee->section = null;
+        // Leave application settings for this employee
+        $employee->leaveApplicationVerifierId = null;
+        $employee->leaveApplicationApproverId = null;
+        $employee->leaveApplicationGrantorId = null;
+        $leaveApplicationSetting = LeaveApplicationSetting::query()->where('designation_id', $this->designation_id)->first();
+        if ($leaveApplicationSetting)
+        {
+            $employee->leaveApplicationVerifierId = $leaveApplicationSetting->verified_by;
+            $employee->leaveApplicationApproverId = $leaveApplicationSetting->approved_by;
+            $employee->leaveApplicationGrantorId = $leaveApplicationSetting->granted_by;
+        }
+        $employee->verifiableLeaveApplicants = LeaveApplicationSetting::query()->where('verified_by', $this->designation_id)->pluck('designation_id')->all();
+        $employee->approvableLeaveApplicants = LeaveApplicationSetting::query()->where('approved_by', $this->designation_id)->pluck('designation_id')->all();
+        $employee->grantableLeaveApplicants = LeaveApplicationSetting::query()->where('granted_by', $this->designation_id)->pluck('designation_id')->all();
 
         if ($expended)
         {
@@ -452,7 +466,7 @@ class Employee extends Model
 
     /**
      *
-     * @return Carbon | null
+     * @return Carbon|\Carbon\Carbon|null
      */
     public function lastWorkAnniversary()
     {
@@ -468,7 +482,7 @@ class Employee extends Model
 
     /**
      *
-     * @return Carbon | null
+     * @return Carbon|\Carbon\Carbon|null
      */
     public function nextWorkAnniversary()
     {

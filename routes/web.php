@@ -109,6 +109,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
         $router->post('', 'EmployeesController@store');
         $router->put('', 'EmployeesController@update');
         $router->get('show', 'EmployeesController@show');
+        $router->get('show-for-user/{userId}', 'EmployeesController@showForUser');
         $router->get('next-id', 'EmployeesController@nextId');
         $router->get('unscoped', 'EmployeesController@indexUnscoped');
 

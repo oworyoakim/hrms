@@ -338,6 +338,23 @@ class EmployeesController extends Controller
         }
     }
 
+    public function showForUser($userId)
+    {
+        try
+        {
+            $data = null;
+            $employee = Employee::query()->firstWhere('user_id', $userId);
+            if ($employee)
+            {
+                $data = $employee->getDetails(false);
+            }
+            return response()->json($data);
+        } catch (Exception $ex)
+        {
+            return response()->json($ex->getMessage(), Response::HTTP_FORBIDDEN);
+        }
+    }
+
     public function nextId()
     {
         try
