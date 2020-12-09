@@ -19,6 +19,11 @@ class Leave extends Model
         return $this->belongsTo(LeaveType::class, 'leave_type_id');
     }
 
+    public function leavePolicy()
+    {
+        return $this->belongsTo(LeavePolicy::class, 'policy_id');
+    }
+
     public function employee()
     {
         return $this->belongsTo(User::class, 'employee_id');

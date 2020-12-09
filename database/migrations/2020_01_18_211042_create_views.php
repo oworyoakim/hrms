@@ -14,7 +14,7 @@ class CreateViews extends Migration
      */
     public function up()
     {
-        $query = "SELECT leave_policies.id AS policy_id,leave_policies.leave_type_id, leave_policies.gender,policy_scales.salary_scale_id,policy_scales.active AS status FROM policy_scales LEFT JOIN leave_policies ON(policy_scales.leave_policy_id = leave_policies.id)";
+        $query = "SELECT leave_policies.id AS policy_id,leave_policies.leave_type_id, leave_policies.gender,policy_scales.salary_scale_id,leave_policies.active as policy_status, policy_scales.active AS scale_status FROM policy_scales LEFT JOIN leave_policies ON(policy_scales.leave_policy_id = leave_policies.id)";
         DB::statement("CREATE OR REPLACE VIEW leave_policy_view AS ({$query})");
     }
 

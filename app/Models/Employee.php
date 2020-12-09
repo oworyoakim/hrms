@@ -415,18 +415,7 @@ class Employee extends Model
             throw new Exception('Sorry, you are still on leave!');
         }
         // check if there are no days left for the leave if its earned leave
-        $policyBuilder = $leaveType->policies()->active();
-        if ($this->gender == 'male' || $this->gender == 'female')
-        {
-            $policyBuilder->where(function ($query) {
-                $query->where('gender', $this->gender)
-                      ->orWhere('gender', 'both');
-            });
-        } else
-        {
-            $policyBuilder->where('gender', $this->gender);
-        }
-        $activePolicy = $policyBuilder->first();
+        $activePolicy = $this->getActiveLeavePolicy($leaveType->id);
         // If this leave has no policy, reject request
         if (!$activePolicy)
         {
@@ -442,20 +431,9 @@ class Employee extends Model
             throw new Exception("Sorry, you cannot apply for this leave because there is no active policy associated with this leave. Contact HR for help!");
         }
         // check for remaining leave days for earned leave
-        if ($activePolicy->earned_leave)
+        if ($leaveType->earned_leave)
         {
-            $spent = LeaveTracker::query()->where('employee_id', $this->id)
-                                 ->where('leave_type_id', $activePolicy->leave_type_id)
-                                 ->where('status', 'onleave')
-                                 ->whereDate("period_start_date", '<=', $startDate->toDateString())
-                                 ->whereDate('period_end_date', '>=', $startDate->toDateString())
-                                 ->count();
-            $balances = $this->leaveBalances()
-                             ->where('leave_type_id', $leaveType->id)
-                             ->sum('balance');
-            $totalDaysWorked = Carbon::today()->diffInDays($lastAnniversary);
-            $daysEarned = round(($totalDaysWorked / 365) * $activePolicy->duration);
-            $totalAvailableDays = $daysEarned + $balances - $spent;
+            $totalAvailableDays = $this->getTotalRemainingDaysForEarnedLeave($leaveType->id, $startDate);
             if ($totalAvailableDays < $duration)
             {
                 throw new Exception("Sorry, the maximum days you can apply for this leave is {$totalAvailableDays}");
@@ -604,6 +582,79 @@ class Employee extends Model
 
             $this->save();
         }
+    }
+
+    public function getActiveLeavePolicy(int $leaveTypeId)
+    {
+        $policyBuilder = LeavePolicy::active();
+        $policyBuilder->where('leave_type_id', $leaveTypeId);
+        if ($this->gender == 'male' || $this->gender == 'female')
+        {
+            $policyBuilder->where(function ($query) {
+                $query->where('gender', $this->gender)
+                      ->orWhere('gender', 'both');
+            });
+        } else
+        {
+            $policyBuilder->where('gender', $this->gender);
+        }
+        $activePolicy = $policyBuilder->first();
+
+        return $activePolicy;
+    }
+
+    public function getEntitlement(int $leaveTypeId)
+    {
+        $activePolicy = $this->getActiveLeavePolicy($leaveTypeId);
+        if (empty($activePolicy))
+        {
+            return 0;
+        }
+        return $activePolicy->duration;
+    }
+
+    public function getTotalDaysEarned(int $leaveTypeId)
+    {
+        $lastAnniversary = $this->lastWorkAnniversary();
+        if (empty($lastAnniversary))
+        {
+            return 0;
+        }
+        $entitlement = $this->getEntitlement($leaveTypeId);
+        $totalDaysWorked = Carbon::today()->diffInDays($lastAnniversary);
+        $daysEarned = round(($totalDaysWorked / 365) * $entitlement);
+
+        return $daysEarned;
+    }
+
+    public function getTotalRemainingDaysForEarnedLeave($leaveTypeId, Carbon $startDate)
+    {
+        // get the total days earned for earned leave
+        $daysEarned = $this->getTotalDaysEarned($leaveTypeId);
+        // get the days spent on leave
+        $spent = LeaveTracker::query()->where('employee_id', $this->id)
+                             ->where('leave_type_id', $leaveTypeId)
+                             ->where('status', 'onleave')
+                             ->whereDate("period_start_date", '<=', $startDate->toDateString())
+                             ->whereDate('period_end_date', '>=', $startDate->toDateString())
+                             ->count();
+        // get the balances
+        $balances = $this->getTotalLeaveBalances($leaveTypeId, $startDate);
+        // get the total remain days
+        $totalAvailableDays = $daysEarned + $balances - $spent;
+
+        return $totalAvailableDays;
+    }
+
+    public function getTotalLeaveBalances(int $leaveTypeId, Carbon $endDate){
+        if(!$this->date_joined){
+            return 0;
+        }
+        return $this->leaveBalances()
+                    ->where('leave_type_id', $leaveTypeId)
+                    ->whereDate('start_date', '>=', $this->date_joined)
+                    ->whereDate('end_date', '<=', $endDate)
+                    ->sum('balance');
     }
 
 

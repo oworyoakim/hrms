@@ -25,6 +25,11 @@ class LeaveApplication extends Model
         return $this->belongsTo(Employee::class, 'employee_id');
     }
 
+    public function leavePolicy()
+    {
+        return $this->belongsTo(LeavePolicy::class, 'policy_id');
+    }
+
     public function scopePending(Builder $query)
     {
         return $query->where('status', 'pending');

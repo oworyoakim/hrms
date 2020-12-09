@@ -39,6 +39,7 @@ class LeaveTypesController extends Controller
                 'title' => $request->get('title'),
                 'description' => $request->get('description'),
                 'created_by' => $request->get('userId'),
+                'earned_leave' => !!$request->get('earnedLeave'),
             ];
             $leaveType = LeaveType::query()->create($data);
             Artisan::call('load:leave-balances', ['leave_type_id' => $leaveType->id]);
@@ -73,6 +74,7 @@ class LeaveTypesController extends Controller
             $leaveType->title = $title;
             $leaveType->description = $description;
             $leaveType->updated_by = $request->get('userId');
+            $leaveType->earned_leave = !!$request->get('earnedLeave');
             $leaveType->save();
             return response()->json('Changes Applied!');
         } catch (Exception $ex)

@@ -156,6 +156,7 @@ $router->group(['prefix' => 'v1'], function () use ($router) {
     $router->group(['prefix' => 'leaves'], function () use ($router) {
         // leaves
         $router->get('', 'LeavesController@index');
+        $router->get('history', 'LeavesController@history');
 
         // leaves/types
         $router->group(['prefix' => 'types'], function () use ($router) {

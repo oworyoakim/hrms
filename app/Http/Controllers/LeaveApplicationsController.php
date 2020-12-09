@@ -137,7 +137,7 @@ class LeaveApplicationsController extends Controller
                 throw new Exception("Leave application not found!");
             }
             $leaveApplication->employee_id = $employee_id;
-            $leaveApplication->leave_type_id = $leave_type_id;
+            // $leaveApplication->leave_type_id = $leave_type_id;
             $leaveApplication->start_date = $start_date;
             $leaveApplication->duration = $duration;
             $leaveApplication->save();

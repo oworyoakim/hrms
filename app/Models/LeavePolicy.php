@@ -73,7 +73,6 @@ class LeavePolicy extends Model
         $policy->leaveTypeId = $this->leave_type_id;
         $policy->leaveType = $this->leaveType;
         $policy->withWeekend = !!$this->with_weekend;
-        $policy->earnedLeave = !!$this->earned_leave;
         $policy->carryForward = !!$this->carry_forward;
         $policy->duration = $this->duration;
         $policy->maxCarryForwardDuration = $this->max_carry_forward_duration;

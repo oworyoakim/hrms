@@ -35,6 +35,7 @@ class LeaveType extends Model
         $leaveType->title = $this->title;
         $leaveType->description = $this->description;
         $leaveType->active = !!$this->active;
+        $leaveType->earnedLeave = !!$this->earned_leave;
         $leaveType->numOngoing = $this->leaves()->ongoing()->count();
         return $leaveType;
     }

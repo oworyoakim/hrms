@@ -6,6 +6,7 @@ use App\Models\LeavePolicy;
 use App\Models\LeavePolicyView;
 use App\Models\PolicyScale;
 use App\Models\SalaryScale;
+use App\Models\LeaveType;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
@@ -40,7 +41,7 @@ class LeavePoliciesController extends Controller
     {
         try
         {
-            $salaryScales = $request->get('selectedSalaryScaleIds') ?: [];
+            $salaryScales = $request->get('salaryScaleIds') ?: [];
             $numScales = count($salaryScales);
             if ($numScales == 0)
             {
@@ -48,30 +49,47 @@ class LeavePoliciesController extends Controller
             }
 
             $leave_type_id = $request->get('leaveTypeId');
-            if (!$leave_type_id)
+            $leaveType = LeaveType::query()->find($leave_type_id);
+            if (!$leaveType)
             {
-                throw new Exception('Leave type required!');
+                throw new Exception('Leave type is required!');
             }
 
             // validate gender and leave type combination
             $gender = $request->get('gender') ?: 'both';
             $active = !!$request->get('active');
 
-            $policyBuilder = LeavePolicy::active()->where('leave_type_id', $leave_type_id);
+            $failedScales = Collection::make();
 
-            if ($gender == 'male' || $gender == 'female')
+            foreach ($salaryScales as $salaryScale)
             {
-                $policyBuilder->where(function ($query) use ($gender) {
-                    $query->where('gender', $gender)->orWhere('gender', 'both');
-                });
-            } else
-            {
-                $policyBuilder->where('gender', $gender);
+                $policyBuilder = LeavePolicyView::query()
+                                                ->where('policy_status', true)
+                                                ->where('leave_type_id', $leave_type_id)
+                                                ->where('salary_scale_id', $salaryScale);
+
+                if ($gender == 'male' || $gender == 'female')
+                {
+                    $policyBuilder->where(function ($query) use ($gender) {
+                        $query->where('gender', $gender)->orWhere('gender', 'both');
+                    });
+                } else
+                {
+                    $policyBuilder->where('gender', $gender);
+                }
+                $activePolicies = $policyBuilder->get();
+                if ($activePolicies->count())
+                {
+                    $scale = SalaryScale::query()->find($salaryScale);
+                    $failedScales->push($scale->scale);
+                }
             }
-            $activePolicies = $policyBuilder->get();
-            if ($activePolicies->count())
+
+            if ($failedScales->count())
             {
-                throw new Exception("This leave already has an active policy with gender {$gender}. Deactivate policy or change to a different gender and try again!");
+                $message = "{$leaveType->title} already has an active policy with gender {$gender} and salary scale(s) {$failedScales->implode(',')}. Deactivate policy or change to a different gender and try again!";
+
+                throw new Exception($message);
             }
 
             $data = [
@@ -80,14 +98,13 @@ class LeavePoliciesController extends Controller
                 'gender' => $gender,
                 'description' => $request->get('description'),
                 'duration' => $request->get('duration'),
-                'earned_leave' => !!$request->get('earnedLeave'),
                 'active' => $active,
                 'with_weekend' => !!$request->get('withWeekend'),
                 'carry_forward' => !!$request->get('carryForward'),
                 'max_carry_forward_duration' => $request->get('maxCarryForwardDuration'),
                 'created_by' => $request->get('userId'),
             ];
-
+            /*
             $messages = Collection::make();
 
             // we must validate
@@ -118,6 +135,7 @@ class LeavePoliciesController extends Controller
 
                 throw new Exception($message);
             }
+            */
             // create if we dont have active policies for this leave type
             DB::beginTransaction();
             $policy = LeavePolicy::query()->create($data);
@@ -146,13 +164,13 @@ class LeavePoliciesController extends Controller
             {
                 throw new Exception('Leave policy not found!');
             }
-            $leavePolicy->gender = $request->get('gender');
+            //$leavePolicy->gender = $request->get('gender');
+            $leavePolicy->title = $request->get('title');
             $leavePolicy->description = $request->get('description');
-            $leavePolicy->duration = $request->get('duration');
-            $leavePolicy->earned_leave = !!$request->get('earnedLeave');
-            $leavePolicy->with_weekend = !!$request->get('withWeekend');
-            $leavePolicy->carry_forward = !!$request->get('carryForward');
-            $leavePolicy->max_carry_forward_duration = $request->get('maxCarryForwardDuration');
+            //$leavePolicy->duration = $request->get('duration');
+            //$leavePolicy->with_weekend = !!$request->get('withWeekend');
+            //$leavePolicy->carry_forward = !!$request->get('carryForward');
+            //$leavePolicy->max_carry_forward_duration = $request->get('maxCarryForwardDuration');
             $leavePolicy->save();
 
             return response()->json('Record Saved!');
@@ -201,13 +219,14 @@ class LeavePoliciesController extends Controller
             }
             $policyScaleIds = $leavePolicy->scales()->pluck('salary_scale_id')->all();
             $numActivePolicies = LeavePolicyView::query()
-                                                ->where('policy_id','<>',$leave_policy_id)
-                                                ->where('leave_type_id',$leavePolicy->leave_type_id)
-                                                ->where('gender',$leavePolicy->gender)
-                                                ->whereIn('salary_scale_id',$policyScaleIds)
-                                                ->where('status',true)
+                                                ->where('policy_id', '<>', $leave_policy_id)
+                                                ->where('leave_type_id', $leavePolicy->leave_type_id)
+                                                ->where('gender', $leavePolicy->gender)
+                                                ->whereIn('salary_scale_id', $policyScaleIds)
+                                                ->where('policy_status', true)
                                                 ->count();
-            if($numActivePolicies){
+            if ($numActivePolicies)
+            {
                 throw new Exception("Sorry. There exists at least one active policy with similar settings!");
             }
             DB::beginTransaction();

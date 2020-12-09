@@ -200,6 +200,8 @@ class Designation extends Model
                 {
                     $designation->leaveApplicationVerifier = $leaveApplicationsVerifier->getDetails(true);
                 }
+            }else{
+                $designation->leaveApplicationVerifier = $this->getDetails(true);
             }
             // avoid infinite loop
             if ($leaveApplicationSetting->approved_by != $this->id)
@@ -209,6 +211,8 @@ class Designation extends Model
                 {
                     $designation->leaveApplicationApprover = $leaveApplicationApprover->getDetails(true);
                 }
+            }else{
+                $designation->leaveApplicationApprover = $this->getDetails(true);
             }
             // avoid infinite loop
             if ($leaveApplicationSetting->granted_by != $this->id)
@@ -218,6 +222,8 @@ class Designation extends Model
                 {
                     $designation->leaveApplicationGranter = $leaveApplicationGranter->getDetails(true);
                 }
+            }else{
+                $designation->leaveApplicationGranter = $this->getDetails(true);
             }
         }
 
